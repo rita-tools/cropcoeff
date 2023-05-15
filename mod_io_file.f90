@@ -251,8 +251,6 @@ module mod_io_file
 		
 		integer, dimension(:), allocatable :: maxIdx
 		
-		REAL(dp) :: kcb_min, kcb_max
-		
 		ncols = -1
 		line = 0
 		errorFlag = 0
@@ -473,22 +471,8 @@ module mod_io_file
 			end if
 		end do
 		
-		! adjust cf
-		! f_c=((K_cb-K_(c min))/(K_(c max)- K_(c min) ))^((1+0.5h) )
-		kcb_min = minval(aCrop%Kcb)
-		kcb_max = maxval(aCrop%Kcb)
-		
-		do i=1, size(aCrop%Kcb)
-			if (aCrop%fc(i) == nodatar) then
-				if ((kcb_max - kcb_min)>0) then
-					aCrop%fc(i) = ((aCrop%Kcb(i)-kcb_min)/(kcb_max - kcb_min))**(1+0.5*aCrop%Hc(i))
-				else
-					!print*,'here: kcb_min = ',kcb_min,' kcb_max = ',kcb_max,' aCrop%fc(i)  = ',aCrop%fc(i) 
-					aCrop%fc(i) = 0.
-				end if
-			end if
-		end do
-		
+		! DON'T adjust cf: negative value says to idragra to calculate it according to the formula
+				
 	end subroutine read_crop_par
 
 
