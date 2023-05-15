@@ -251,6 +251,8 @@ module mod_io_file
 		
 		integer, dimension(:), allocatable :: maxIdx
 		
+		REAL(dp) :: kcb_min, kcb_max
+		
 		ncols = -1
 		line = 0
 		errorFlag = 0
@@ -270,8 +272,8 @@ module mod_io_file
 		aCrop%cropName = aCrop%cropName(1:p-1)
 		aCrop%fileName = parFilePath
 		
-		allocate(aCrop%GDD(10), aCrop%Kcb(10), aCrop%LAI(10), aCrop%Hc(10), &
-						aCrop%Sr(10),aCrop%Ky(10), aCrop%CNvalue(10))
+		allocate(aCrop%GDD(maxlength), aCrop%Kcb(maxlength), aCrop%LAI(maxlength), aCrop%Hc(maxlength), &
+						aCrop%Sr(maxlength),aCrop%Ky(maxlength), aCrop%CNvalue(maxlength), aCrop%fc(maxlength))
 		
         do while (ios == 0)
             read (free_unit, '(A)', iostat=ios) buffer
@@ -380,12 +382,18 @@ module mod_io_file
 							ncols = 6
 							i=1
 						case('gdd kcb lai hc sr ky cn')
-							! start reading 6xcols table
-							!print *,'init table 6'
+							! start reading 7xcols table
+							!print *,'init table 7'
 							ncols = 7
+							i=1
+						case('gdd kcb lai hc sr ky cn fc')
+							! start reading 8xcols table
+							!print *,'init table 8'
+							ncols = 8
 							i=1
 						CASE('endtable')
 							i=i-1 ! update row counter
+							ncols = -1
 						CASE('')
 							write (buffer, "(I2)") line
 						CASE DEFAULT
@@ -398,17 +406,28 @@ module mod_io_file
 					! set Ky to nodata
 					aCrop%Ky(i) = nodatar
 					aCrop%CNvalue(i) = nodatar
+					aCrop%fc(i) = nodatar
 					i=i+1
 				ELSEif (ncols == 6) then
 					!print *,'read row 6'
 					buffer = trim(replaceText(label,'*',trim(realToStr(nodatar))))
 					read(buffer,*) aCrop%GDD(i), aCrop%Kcb(i), aCrop%LAI(i), aCrop%Hc(i), aCrop%Sr(i),aCrop%Ky(i)
 					aCrop%CNvalue(i) = nodatar
+					aCrop%fc(i) = nodatar
 					i=i+1
 				ELSEif (ncols == 7) then
 					!print *,'read row 7'
 					buffer = trim(replaceText(label,'*',trim(realToStr(nodatar))))
 					read(buffer,*) aCrop%GDD(i), aCrop%Kcb(i), aCrop%LAI(i), aCrop%Hc(i), aCrop%Sr(i),aCrop%Ky(i),aCrop%CNvalue(i)
+					aCrop%fc(i) = nodatar
+					i=i+1
+				ELSEif (ncols == 8) then
+					!print *,'read row 8'
+					buffer = trim(replaceText(label,'*',trim(realToStr(nodatar))))
+					read(buffer,*) aCrop%GDD(i), aCrop%Kcb(i), aCrop%LAI(i), aCrop%Hc(i), aCrop%Sr(i),&
+											aCrop%Ky(i),&
+											aCrop%CNvalue(i),&
+											aCrop%fc(i)
 					i=i+1
 					
 				end if
@@ -425,6 +444,7 @@ module mod_io_file
 		call resizeArray(aCrop%Sr,i)
 		call resizeArray(aCrop%Ky,i)
 		call resizeArray(aCrop%CNvalue,i)
+		call resizeArray(aCrop%fc,i)
 		
 		! replace nodata with interpolated values
 		aCrop%Kcb = fillMissingL(aCrop%Kcb, aCrop%GDD)
@@ -432,6 +452,7 @@ module mod_io_file
 		aCrop%Hc = fillMissingL(aCrop%Hc, aCrop%GDD)
 		aCrop%Sr = fillMissingL(aCrop%Sr, aCrop%GDD)
 		aCrop%Ky = fillMissingL(aCrop%Ky, aCrop%GDD)
+		aCrop%fc = fillMissingL(aCrop%fc, aCrop%GDD)
 		
 		! adjust CN
 		do i=1, size(aCrop%Kcb)
@@ -449,6 +470,19 @@ module mod_io_file
 			if (aCrop%Ky(i) == nodatar) then
 				if (aCrop%Kcb(i) < 0.45) aCrop%Ky(i) = aCrop%ky2 ! in the low-middle development
 				if (aCrop%Kcb(i) >= 0.45) aCrop%Ky(i) = aCrop%ky3 ! in the high-middle development
+			end if
+		end do
+		
+		! adjust cf
+		! f_c=((K_cb-K_(c min))/(K_(c max)- K_(c min) ))^((1+0.5h) )
+		kcb_min = minval(aCrop%Kcb)
+		kcb_max = maxval(aCrop%Kcb)
+		
+		do i=1, size(aCrop%Kcb)
+			if ((aCrop%fc(i) == nodatar) .and. ((kcb_max - kcb_min)>0)) then
+				aCrop%fc(i) = ((aCrop%Kcb(i)-kcb_min)/(kcb_max - kcb_min))**(1+0.5*aCrop%Hc(i))
+			else
+				aCrop%fc(i) = 0.
 			end if
 		end do
 		
@@ -515,9 +549,10 @@ module mod_io_file
 		print *, 'fraction of root in the transpirative layer', aCrop%RFt
 
 		print *
-		print *, "i GDD  Kcb LAI Hc Sr Ky CNvalue"
+		print *, "i GDD  Kcb LAI Hc Sr Ky CNvalue, fc"
 		do i=1, size(aCrop%GDD)
-		   print *, i, aCrop%GDD(i), aCrop%Kcb(i), aCrop%LAI(i), aCrop%Hc(i), aCrop%Sr(i),aCrop%Ky(i),aCrop%CNvalue(i)
+		   print *, i, aCrop%GDD(i), aCrop%Kcb(i), aCrop%LAI(i), aCrop%Hc(i), aCrop%Sr(i),&
+							aCrop%Ky(i),aCrop%CNvalue(i),aCrop%fc(i)
 		end do
 		
 		print*

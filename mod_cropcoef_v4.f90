@@ -443,7 +443,7 @@ module mod_cropcoef_v4
 														RHmin, Wind, &
 														cropList, &
 														DoY,cropsOverYear,T_GDD_corr, cropInField, &
-														lai, hc,kcb, adjKcb, sr, ky, cn, &
+														lai, hc,kcb, adjKcb, sr, ky, cn, fc, &
 														printFun)
 												
 		Real(dp), intent(in) :: wsLat
@@ -453,7 +453,7 @@ module mod_cropcoef_v4
 		type(Crop), Intent(in), dimension(:) :: cropList
 		
 		integer, intent(out), dimension(:), allocatable :: DoY,cropsOverYear,cropInField
-		real(dp), intent(out), dimension(:), allocatable :: T_GDD_corr, lai, hc,kcb,adjKcb, sr, ky, cn
+		real(dp), intent(out), dimension(:), allocatable :: T_GDD_corr, lai, hc,kcb,adjKcb, sr, ky, cn, fc
 				
 		integer :: nOfDays, i,  c, s, e, timeSpan, harvestGDDIdx
 		integer, dimension(:), allocatable :: sowIndex, maxHarvestIndex
@@ -462,7 +462,7 @@ module mod_cropcoef_v4
 		real(dp), dimension(:), allocatable :: T_GDD_sub,GDD_cum_sub, T_GDD_corr_sub,VF_sub, PF_sub
 		integer, dimension(:), allocatable ::  rows
 		
-		real(dp), dimension(:), allocatable :: parGDD, parKcb, parLAI, parHc, parSr, parKy, parCNvalue
+		real(dp), dimension(:), allocatable :: parGDD, parKcb, parLAI, parHc, parSr, parKy, parCNvalue, parFc
 		
 		interface
 			subroutine printFun(text)
@@ -476,7 +476,7 @@ module mod_cropcoef_v4
 		
 		! make a list of crops in field
 		allocate(cropsOverYear(nOfDays),T_GDD_corr(nOfDays), cropInField(nOfDays))
-		allocate(lai(nOfDays), hc(nOfDays),kcb(nOfDays),adjKcb(nOfDays), sr(nOfDays), ky(nOfDays), cn(nOfDays))
+		allocate(lai(nOfDays), hc(nOfDays),kcb(nOfDays),adjKcb(nOfDays), sr(nOfDays), ky(nOfDays), cn(nOfDays), fc(nOfDays))
 		cropInField = 1.
 		cropsOverYear = 0 ! crops always has id from 1
 		T_GDD_corr = 0.
@@ -487,6 +487,7 @@ module mod_cropcoef_v4
 		sr = nodatar
 		ky = nodatar
 		cn = nodatar
+		fc = nodatar
 
 		!print*, 'min lai after allocation: ', minval(lai)
 				
@@ -511,6 +512,7 @@ module mod_cropcoef_v4
 			parSr = repeatPars(cropList(c)%Sr, cropList(c)%HarvNum_max, .false.)
 			parKy = repeatPars(cropList(c)%Ky, cropList(c)%HarvNum_max, .false.)
 			parCNvalue = repeatPars(cropList(c)%CNvalue, cropList(c)%HarvNum_max, .false.)
+			parFc = repeatPars(cropList(c)%fc, cropList(c)%HarvNum_max, .false.)
 			
 			maxGDD = maxval(parGDD)
 			
@@ -539,8 +541,10 @@ module mod_cropcoef_v4
 				
 				
 				timeSpan = e-s+1
+				!print*,'timeSpan = ', timeSpan
 				
 				! set crop
+				!print*,'s = ', s, ' e = ', e
 				cropsOverYear(s:e) = cropList(c)%cropId
 				cropInField(s:e) = 1
 				
@@ -669,7 +673,12 @@ module mod_cropcoef_v4
 				cn(s:e) = fillMissingK(cn(s:e))
 				if ((s-1)>0) cn(s-1) = minval(parCNvalue)
 				if ((e+1)<nOfDays) cn(e+1) = minval(parCNvalue)
-				
+
+				call printFun('*** Assign fc ***')
+				fc(s:e) = computeParamsDistro_v4(GDD_cum_sub, parGDD, parFc,printFun)
+				fc(s:e) = fillMissingL(fc(s:e))
+				if ((s-1)>0) fc(s-1) = minval(parFc)
+				if ((e+1)<nOfDays) fc(e+1) = minval(parFc)
 								
 			end do
 			
@@ -681,7 +690,8 @@ module mod_cropcoef_v4
 	
 	subroutine processWS_v4(aWeatherStation,aCropSeqList, window,movMeanNum, &
 										gddDistro,doyDistro,cropIds,checkFutureTemp, tollerance, vfactor, &
-										laiDistro,hcDistro,kcbDistro,adjKcbDistro,srDistro,kyDistro,cnDistro,&
+										laiDistro,hcDistro,kcbDistro,adjKcbDistro,srDistro,&
+										kyDistro,cnDistro,fcDistro,&
 										printFun)
 		implicit none
 			
@@ -689,7 +699,8 @@ module mod_cropcoef_v4
 		type(WeatherStation), intent(in) :: aWeatherStation
 		integer, intent(in) :: movMeanNum
 		Real(dp), dimension(:,:), intent(inout),allocatable :: gddDistro,doyDistro,cropIds ! for debug
-		Real(dp), dimension(:,:), intent(inout),allocatable :: laiDistro,hcDistro,kcbDistro,adjKcbDistro,srDistro,kyDistro, cnDistro
+		Real(dp), dimension(:,:), intent(inout),allocatable :: laiDistro,hcDistro,kcbDistro,adjKcbDistro,srDistro
+		Real(dp), dimension(:,:), intent(inout),allocatable :: kyDistro, cnDistro, fcDistro
 		integer, intent(inOUT) :: window
 		logical, intent(in) :: checkFutureTemp
 		real(dp), Intent(in) :: tollerance, vfactor
@@ -697,7 +708,7 @@ module mod_cropcoef_v4
 		
 		integer, dimension(:), allocatable :: DoY,cropsOverYear,cropInField
 		REAL(dp), dimension(:), allocatable :: T_GDD_corr, TmaxExt, TminExt, RHminExt, WindExt
-		REAL(dp), dimension(:), allocatable :: lai, hc,kcb, adjKcb, sr, ky, cn
+		REAL(dp), dimension(:), allocatable :: lai, hc,kcb, adjKcb, sr, ky, cn, fc
 		LOGICAL:: debug
 		
 		type(date) :: extStartDate
@@ -741,7 +752,9 @@ module mod_cropcoef_v4
 						adjKcbDistro(nOfDays,nOfCropSeq),&
 						srDistro(nOfDays,nOfCropSeq),&
 						kyDistro(nOfDays,nOfCropSeq),&
-						cnDistro(nOfDays,nOfCropSeq))
+						cnDistro(nOfDays,nOfCropSeq),&
+						fcDistro(nOfDays,nOfCropSeq))
+						
 		gddDistro = 0.
 		doyDistro = 0.
 		cropIds = 0.
@@ -752,6 +765,7 @@ module mod_cropcoef_v4
 		srDistro = nodatar
 		kyDistro = nodatar
 		cnDistro = nodatar
+		fcDistro = nodatar
 		
 		!print *, 'Max val CN distro 0: ',maxval(cnDistro)
 		
@@ -768,7 +782,7 @@ module mod_cropcoef_v4
 												RHminExt, WindExt, &
 												aCropSeqList(j)%cropList, &
 												DoY,cropsOverYear,T_GDD_corr, cropInField, &
-												lai, hc,kcb, adjKcb, sr, ky, cn, &
+												lai, hc,kcb, adjKcb, sr, ky, cn, fc, &
 												printFun)
 												
 											
@@ -782,6 +796,7 @@ module mod_cropcoef_v4
 			srDistro(:,j) = sr
 			kyDistro(:,j) = ky
 			cnDistro(:,j) = cn
+			fcDistro(:,j) = fc
 			
 			!print *, 'Max val CN distro 1: ',maxval(cnDistro(:,j))
 			
@@ -793,6 +808,7 @@ module mod_cropcoef_v4
 			srDistro(:,j) = fillMissingL(srDistro(:,j))
 			kyDistro(:,j) = fillMissingL(kyDistro(:,j))
 			cnDistro(:,j) = fillMissingK(cnDistro(:,j))
+			fcDistro(:,j) = fillMissingL(fcDistro(:,j))
 			
 			! set empty array to zeros
 			!print *, 'Max val CN distro 2: ',maxval(cnDistro(:,j))
@@ -809,6 +825,7 @@ module mod_cropcoef_v4
 			srDistro(:,j) = srDistro(:,j)*cropInField
 			kyDistro(:,j) = kyDistro(:,j)*cropInField
 			cnDistro(:,j) = cnDistro(:,j)*cropInField
+			fcDistro(:,j) = fcDistro(:,j)*cropInField
 
 		end do
 		

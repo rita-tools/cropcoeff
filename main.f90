@@ -40,7 +40,8 @@ program main
 	TYPE(WeatherStation), dimension(:), allocatable :: aWsList
 	TYPE(CropSeq), dimension(:), allocatable :: aCropSeqList
 	Real(dp), dimension(:,:), allocatable :: doyDistro, gddDistro,cropIds, errorCodes
-	Real(dp), dimension(:,:), allocatable :: laiDistro,hcDistro,kcbDistro,adjKcbDistro,srDistro,kyDistro, cnDistro
+	Real(dp), dimension(:,:), allocatable :: laiDistro,hcDistro,kcbDistro,adjKcbDistro,srDistro
+	Real(dp), dimension(:,:), allocatable :: kyDistro, cnDistro, fcDistro
 	
 	integer, dimension(:,:), allocatable :: cropIdsInt, cnDistroInt, doyDistroInt
 	
@@ -202,7 +203,7 @@ program main
 		
 		CALL processWS_v4(aWsList(i), aCropSeqList, Sim%window, Sim%movMeanNum, &
 									gddDistro,doyDistro,cropIds, Sim%checkFutureTemp, Sim%tollerance, Sim%vfactor, &
-									laiDistro,hcDistro,kcbDistro,adjKcbDistro,srDistro,kyDistro, cnDistro, &
+									laiDistro,hcDistro,kcbDistro,adjKcbDistro,srDistro,kyDistro, cnDistro, fcDistro, &
 									addLog)
 								
 		selStart =  Sim%window+1 !lbound(doyDistro, DIM = 1)
@@ -247,6 +248,8 @@ program main
 									cnDistroInt, selStart,selEnd, intFormat, ErrorFlag)
 		call writeRealResults(trim(adjustl(outPath))//delimiter//'Ky.dat',&
 									kyDistro, selStart,selEnd, realFormat, ErrorFlag)
+		call writeRealResults(trim(adjustl(outPath))//delimiter//'fc.dat',&
+							fcDistro, selStart,selEnd, realFormat, ErrorFlag)
 
 		deallocate(gddDistro,&
 							doyDistro, &
@@ -257,6 +260,7 @@ program main
 							adjKcbDistro,&
 							srDistro,&
 							kyDistro,&
+							fcDistro,&
 							cnDistro,&
 							cnDistroInt, &
 							doyDistroInt, &
