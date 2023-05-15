@@ -1,0 +1,9 @@
+# List of crops to be simulated, columns must be separated by one or more tab characters
+Cr_ID	Crop1	Crop2	# Comments
+1	4.tab	2.tab	# spring cereals/Corn shirt
+2	3.tab	*	# Corn long
+3	5.tab	*	# permanent meadow
+4	5bis.tab	*	# permanent meadow no overlaps
+5	1.tab	*	# bare soil
+6	9.tab	*	# rice
+endTable
