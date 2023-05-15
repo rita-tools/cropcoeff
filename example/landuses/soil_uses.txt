@@ -6,4 +6,5 @@ Cr_ID	Crop1	Crop2	# Comments
 4	5bis.tab	*	# permanent meadow no overlaps
 5	1.tab	*	# bare soil
 6	9.tab	*	# rice
+7	12.tab *	# orchard
 endTable

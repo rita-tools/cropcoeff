@@ -479,10 +479,13 @@ module mod_io_file
 		kcb_max = maxval(aCrop%Kcb)
 		
 		do i=1, size(aCrop%Kcb)
-			if ((aCrop%fc(i) == nodatar) .and. ((kcb_max - kcb_min)>0)) then
-				aCrop%fc(i) = ((aCrop%Kcb(i)-kcb_min)/(kcb_max - kcb_min))**(1+0.5*aCrop%Hc(i))
-			else
-				aCrop%fc(i) = 0.
+			if (aCrop%fc(i) == nodatar) then
+				if ((kcb_max - kcb_min)>0) then
+					aCrop%fc(i) = ((aCrop%Kcb(i)-kcb_min)/(kcb_max - kcb_min))**(1+0.5*aCrop%Hc(i))
+				else
+					!print*,'here: kcb_min = ',kcb_min,' kcb_max = ',kcb_max,' aCrop%fc(i)  = ',aCrop%fc(i) 
+					aCrop%fc(i) = 0.
+				end if
 			end if
 		end do
 		
@@ -501,9 +504,9 @@ module mod_io_file
 
 		print *
 		print *, " *** CROP PARAMETERS ***"
-		print *, 'Crop denomination', aCrop%cropName
-		print *, 'Name of the data-base file that contains crop characteristics', aCrop%fileName
-		print *, 'unique id identification', aCrop%cropId
+		print *, 'Crop denomination: ', aCrop%cropName
+		print *, 'Name of the data-base file that contains crop characteristics: ', aCrop%fileName
+		print *, 'unique id identification ', aCrop%cropId
 		print *, 'minimum sowing date (1-366)', aCrop%SowingDate_min
 		print *, 'maximum number of days allowed for sowing after SowingDate_min (1-366)', aCrop%SowingDelay_max
 		print *, 'maximum harvest date (1-366)', aCrop%HarvestDate_max
@@ -549,7 +552,7 @@ module mod_io_file
 		print *, 'fraction of root in the transpirative layer', aCrop%RFt
 
 		print *
-		print *, "i GDD  Kcb LAI Hc Sr Ky CNvalue, fc"
+		print *, "i GDD  Kcb LAI Hc Sr Ky cn fc"
 		do i=1, size(aCrop%GDD)
 		   print *, i, aCrop%GDD(i), aCrop%Kcb(i), aCrop%LAI(i), aCrop%Hc(i), aCrop%Sr(i),&
 							aCrop%Ky(i),aCrop%CNvalue(i),aCrop%fc(i)
