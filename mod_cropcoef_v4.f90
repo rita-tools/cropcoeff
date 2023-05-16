@@ -825,7 +825,10 @@ module mod_cropcoef_v4
 			srDistro(:,j) = srDistro(:,j)*cropInField
 			kyDistro(:,j) = kyDistro(:,j)*cropInField
 			cnDistro(:,j) = cnDistro(:,j)*cropInField
-			fcDistro(:,j) = fcDistro(:,j)*cropInField
+			if (maxval(fcDistro(:,j))/=nodatar) then
+				! clean only if there are valid values (not nodatar)
+				fcDistro(:,j) = fcDistro(:,j)*cropInField
+			end if
 
 		end do
 		
