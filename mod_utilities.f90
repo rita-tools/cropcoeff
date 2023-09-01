@@ -350,7 +350,7 @@ module mod_utilities
 			r = y
 			
 			! fill nan with constant value
-			idx = pack([(i,i=1,n)],y /= nodatar)
+			idx = pack([(i,i=1,n)],y /= nodatar,[(0,i=1,n)])
 			do i=1,size(idx)-1
 				sIdx =idx(i)
 				if (sIdx == 0) then
@@ -385,13 +385,16 @@ module mod_utilities
 			end if
 			
 			! fill nan with linear interpolation
-			idx = pack([(i,i=1,n)],y /= nodatar)
+			idx = pack([(i,i=1,n)],y /= nodatar,[(0,i=1,n)])
 			do i=1,size(idx)-1
 				sIdx =idx(i)
 				if (sIdx == 0) then
 					exit
 				end if
 				eIdx = idx(i+1)
+				if (eIdx == 0) then
+					exit
+				end if
 				nElem = eIdx-sIdx
 				if (xi(eIdx)/=xi(sIdx)) then
 					m = (y(eIdx)-y(sIdx))/(xi(eIdx)-xi(sIdx))
@@ -484,7 +487,7 @@ module mod_utilities
 			
 			! Runs start and end where absdiff is 1.
 			r = 0.
-			r = pack([(i,i=1,n)],absdiff==1.)
+			r = pack([(i,i=1,n)],absdiff==1.,[(0,i=1,n)])
 			!~ print*,'i         a     delta    iszero   absdiff         r'
 			!~ do i=1,size(r)
 				!~ write(*,'(I3,f10.3,f10.3,f10.3,f10.3,f10.3)') i,a(i),delta(i),iszero(i),absdiff(i),r(i)
@@ -519,7 +522,7 @@ module mod_utilities
 			
 			! Runs start and end where absdiff is 1.
 			r = 0.
-			r = pack([(i,i=1,n)],absdiff==1.)
+			r = pack([(i,i=1,n)],absdiff==1.,[(0,i=1,n)])
 			!~ print*,'  i         a       delta      iszero     absdiff         r'
 			!~ do i=1,size(r)
 				!~ write(*,'(I3,f10.3,f10.3,f10.3,f10.3,f10.3)') i,a(i),delta(i),iszero(i),absdiff(i),r(i)
@@ -549,7 +552,7 @@ module mod_utilities
 			absdiff(1:n-1) = abs(iszero(2:n)-iszero(1:n-1)) ! assign to the first
 			
 			! Runs start and end where absdiff is 1.
-			r = pack([(i,i=1,n)],absdiff==1.)
+			r = pack([(i,i=1,n)],absdiff==1.,[(0,i=1,n)])
 		end function
 
 end module

@@ -71,23 +71,24 @@ module mod_cropcoef_v4
 		INTEGER, dimension(:), allocatable :: sowingDateIdx
 		
 		! select all potential sowing days (the number is the same that respects the condition)
-		rows = pack([(i,i=1,size(DoY))], DoY==minSowingDate)
+		rows = pack([(i,i=1,size(DoY))], DoY==minSowingDate,[(0,i=1,size(DoY))])
 		
 		n = size(rows)
-		!print*,'n = ',n
+		
 		allocate(sowingDateIdx(n))
 		sowingDateIdx = 0
 		
 		do j=1,n
 			! select a window for sowing
 			s = rows(j)
-			!print*, 's = ',s
 			if (s ==0) exit
 			e = s+sowingDelay
 			!print*, 'e = ',e
 			! check temperature
-			testTemp = pack([(i,i=1,sowingDelay)], Tave(s:e)>=T_sowing)
-			if (sum(testTemp)==0) then
+			testTemp = pack([(i,i=1,sowingDelay)], Tave(s:e)>=T_sowing,[(0,i=1,sowingDelay)])
+			
+			! add negative control to prevent not realistic results
+			if (sum(testTemp)<=0) then
 				! no temperature condition to sow, assign default
 				if (isWinterCrop .eqv. .true.) then
 					sowingDateIdx(j) = s
@@ -96,9 +97,12 @@ module mod_cropcoef_v4
 				end if
 			else
 				! get the first useful day
-				!print*, 'testTemp(1) = ',testTemp(1)
 				sowingDateIdx(j) = s+testTemp(1)-1
 			end if
+
+			! deallocate pack array to clear assigned space
+			deallocate(testTemp)
+			
 		end do
 		
 	end FUNCTION
@@ -111,7 +115,7 @@ module mod_cropcoef_v4
 		INTEGER, dimension(:), allocatable :: maxHarvestIndex
 		integer :: i,j, n 
 		! select all potential harvest days (the number is the same that respects the condition)
-		rows = pack([(i,i=1,size(DoY))], DoY==maxHarvestDate)
+		rows = pack([(i,i=1,size(DoY))], DoY==maxHarvestDate,[(0,i=1,size(DoY))])
 		
 		n = size(rows)
 		allocate(maxHarvestIndex(size(sowIndex)))
@@ -319,7 +323,7 @@ module mod_cropcoef_v4
 		
 		adjKcb = Kcb
 		r = 0
-		r = pack([(i,i=1,n)],Kcb/=nodatar)
+		r = pack([(i,i=1,n)],Kcb/=nodatar,[(0,i=1,n)])
 		
 		!~ print*, 'len(r) = ', size(r), ' n = ', n
 		!~ print*, 'i	s	e'
@@ -382,9 +386,12 @@ module mod_cropcoef_v4
 			
 			!infPoints(n)=gddTest(n)
 			! get ascendet points
-			idx = pack([(i,i=1,n)],infPoints==1.)
+			idx = pack([(i,i=1,n)],infPoints==1.,[(0,i=1,n)])
 			do j=1,size(idx)
 				!~ print *,'asc gdd = ',gdd,' idx = ',idx(j),' pval = ',pValue
+				if (idx(j) == 0) then
+					exit
+				end if
 				if (parValues(idx(j))==nodatar) then
 					parValues(idx(j)) = pValue
 				else
@@ -396,7 +403,7 @@ module mod_cropcoef_v4
 		end do
 		
 		maxGDD = maxval(T_GDD_corr)
-		idx = pack([(i,i=1,n)],T_GDD_corr==maxGDD)
+		idx = pack([(i,i=1,n)],T_GDD_corr==maxGDD,[(0,i=1,n)])
 		
 		if (size(idx)==0) then
 			call printFun('Idx is zero')
@@ -502,7 +509,7 @@ module mod_cropcoef_v4
 		
 		! for each crop in cropsequence
 		do c=1, size(cropList)
-			CALL printFun('Processing crop '//trim(cropList(c)%cropName))
+		 	CALL printFun('Processing crop '//trim(cropList(c)%cropName))
 				
 			! make the params with multiple harvest
 			parGDD = repeatPars(cropList(c)%GDD, cropList(c)%HarvNum_max, .true.)
@@ -532,6 +539,15 @@ module mod_cropcoef_v4
 				s = sowIndex(i)
 				e = maxHarvestIndex(i)
 				
+				if ((s == 0) .or. (e == 0)) then
+					exit
+				end if
+				
+				
+				if (e>nOfDays) then
+					print*,'maxHarvestIndex greater than maximum number of days'
+					e=nOfDays
+				end if 
 				! TODO: check when s<e
 				
 				if (s>e) exit

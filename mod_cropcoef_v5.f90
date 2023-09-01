@@ -165,7 +165,7 @@ module mod_cropcoef_v5
 				infPoints(2:n) = gddTest(2:n)-gddTest(1:n-1)
 				infPoints(n)=gddTest(n)
 				! get ascendet points
-				idx = pack([(i,i=1,n)],infPoints==1.)
+				idx = pack([(i,i=1,n)],infPoints==1.,[(0,i=1,n)])
 				do j=1,size(idx)
 					!print *,'asc gdd = ',gdd,' idx = ',idx(j),' pval = ',pValue
 					if (idx(j)>0) then
@@ -177,7 +177,7 @@ module mod_cropcoef_v5
 				
 				! get descendet points
 				idx = 0
-				idx = pack([(i,i=1,n)],infPoints==-1.)
+				idx = pack([(i,i=1,n)],infPoints==-1.,[(0,i=1,n)])
 				do j=1,size(idx)
 					!print *,'desc gdd = ',gdd,' idx = ',idx(j)-1,' pval = ',pValue
 					! FIXED: get previous point
@@ -406,7 +406,7 @@ subroutine computeCropSeq_v5(wsLat, startDay, Tmax, Tmin, movMeanNum, &
 
 			if (maxval(GDD_cum_sub, DIM=1)>tollerance*maxGDD) then
 				! enough thermal resources to finish the crop
-				rows = pack([(i,i=1,timeSpan)],GDD_cum_sub > maxGDD)
+				rows = pack([(i,i=1,timeSpan)],GDD_cum_sub > maxGDD,[(0,i=1,timeSpan)])
 				! try with full thermal condition
 				if (maxGDD<0) then
 					! undetermined number of crops
@@ -416,7 +416,7 @@ subroutine computeCropSeq_v5(wsLat, startDay, Tmax, Tmin, movMeanNum, &
 						maxGDDIdx = rows(1)
 					else
 						! this condition is already verified
-						rows = pack([(i,i=1,timeSpan)],GDD_cum_sub > tollerance*maxGDD)
+						rows = pack([(i,i=1,timeSpan)],GDD_cum_sub > tollerance*maxGDD,[(0,i=1,timeSpan)])
 						maxGDDIdx = rows(1)
 					end if
 				end if
