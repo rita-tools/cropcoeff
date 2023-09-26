@@ -570,7 +570,8 @@ module mod_cropcoef_v4
 				end if
 				
 				! check if there is enough time from the previous crop
-				if (cropList(c)%CropsOverlap>0) then
+				if ((cropList(c)%CropsOverlap>0).and.(cropList(c)%CropsOverlap<s)) then
+					! check id s is one
 					cropsOverYear(s-cropList(c)%CropsOverlap:s-1) = 0.
 				end if
 				
