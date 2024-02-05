@@ -470,7 +470,7 @@ module mod_cropcoef_v4
 		real(dp), dimension(:), allocatable :: T_GDD_sub,GDD_cum_sub, T_GDD_corr_sub,VF_sub, PF_sub
 		integer, dimension(:), allocatable ::  rows
 		
-		real(dp), dimension(:), allocatable :: parGDD, parKcb, parLAI, parHc, parSr, parKy, parCNvalue, parFc
+		real(dp), dimension(:), allocatable :: parGDD, parKcb, parLAI, parHc, parSr, parKy, parCNvalue, parFc, parPRAW
 		
 		interface
 			subroutine printFun(text)
@@ -486,7 +486,7 @@ module mod_cropcoef_v4
 		allocate(cropsOverYear(nOfDays),T_GDD_corr(nOfDays), cropInField(nOfDays))
 		allocate(lai(nOfDays), hc(nOfDays),kcb(nOfDays),adjKcb(nOfDays), sr(nOfDays), ky(nOfDays), cn(nOfDays), fc(nOfDays))
 		allocate(praw(nOfDays))
-		cropInField = 1.
+		cropInField = 0. ! FIX 1.
 		cropsOverYear = 0 ! crops always has id from 1
 		T_GDD_corr = 0.
 		lai = nodatar

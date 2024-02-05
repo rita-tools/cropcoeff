@@ -273,6 +273,9 @@ module mod_io_file
 		allocate(aCrop%GDD(maxlength), aCrop%Kcb(maxlength), aCrop%LAI(maxlength), aCrop%Hc(maxlength), &
 						aCrop%Sr(maxlength),aCrop%Ky(maxlength), aCrop%CNvalue(maxlength), aCrop%fc(maxlength),&
 						aCrop%praw_list(maxlength))
+						
+		! init variable
+		aCrop%praw_list = nodatar
 		
         do while (ios == 0)
             read (free_unit, '(A)', iostat=ios) buffer
@@ -358,7 +361,7 @@ module mod_io_file
 							buffer = trim(replaceText(buffer,'*',trim(realToStr(nodatar))))
 							read(buffer,*,iostat=ie) aCrop%praw_list
 							print*,'praw_list =',aCrop%praw_list
-							aCrop%pRAW = praw_list(1) !strToReal(buffer)
+							aCrop%pRAW = aCrop%praw_list(1) !strToReal(buffer)
 						case('ainterception')
 							aCrop%aInterception = strToReal(buffer)
 						case('cl_cn')
@@ -448,6 +451,8 @@ module mod_io_file
 		call resizeArray(aCrop%CNvalue,i)
 		call resizeArray(aCrop%fc,i)
 		
+		CALL resizeArray(aCrop%praw_list,i)
+		
 		! replace nodata with interpolated values
 		aCrop%Kcb = fillMissingL(aCrop%Kcb, aCrop%GDD)
 		aCrop%LAI = fillMissingL(aCrop%LAI, aCrop%GDD)
@@ -456,7 +461,7 @@ module mod_io_file
 		aCrop%Ky = fillMissingL(aCrop%Ky, aCrop%GDD)
 		aCrop%fc = fillMissingL(aCrop%fc, aCrop%GDD)
 		
-		aCrop%praw_list = fillMissingK(aCrop%praw_list, aCrop%GDD)
+		aCrop%praw_list = fillMissingK(aCrop%praw_list)
 		
 		! adjust CN
 		do i=1, size(aCrop%Kcb)
@@ -542,10 +547,10 @@ module mod_io_file
 		print *, 'fraction of root in the transpirative layer', aCrop%RFt
 
 		print *
-		print *, "i GDD  Kcb LAI Hc Sr Ky cn fc"
+		print *, "i GDD  Kcb LAI Hc Sr Ky cn fc praw"
 		do i=1, size(aCrop%GDD)
 		   print *, i, aCrop%GDD(i), aCrop%Kcb(i), aCrop%LAI(i), aCrop%Hc(i), aCrop%Sr(i),&
-							aCrop%Ky(i),aCrop%CNvalue(i),aCrop%fc(i)
+							aCrop%Ky(i),aCrop%CNvalue(i),aCrop%fc(i),aCrop%praw_list(i)
 		end do
 		
 		print*

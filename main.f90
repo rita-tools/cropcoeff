@@ -204,7 +204,7 @@ program main
 		
 		CALL processWS_v4(aWsList(i), aCropSeqList, Sim%window, Sim%movMeanNum, &
 									gddDistro,doyDistro,cropIds, Sim%checkFutureTemp, Sim%tollerance, Sim%vfactor, &
-									laiDistro,hcDistro,kcbDistro,adjKcbDistro,srDistro,kyDistro, cnDistro, fcDistro, prawDistro &
+									laiDistro,hcDistro,kcbDistro,adjKcbDistro,srDistro,kyDistro, cnDistro, fcDistro, prawDistro, &
 									addLog)
 								
 		selStart =  Sim%window+1 !lbound(doyDistro, DIM = 1)
@@ -251,7 +251,9 @@ program main
 									kyDistro, selStart,selEnd, realFormat, ErrorFlag)
 		call writeRealResults(trim(adjustl(outPath))//delimiter//'fc.dat',&
 							fcDistro, selStart,selEnd, realFormat, ErrorFlag)
-
+		call writeRealResults(trim(adjustl(outPath))//delimiter//'praw.dat',&
+							prawDistro, selStart,selEnd, realFormat, ErrorFlag)
+	
 		deallocate(gddDistro,&
 							doyDistro, &
 							cropIds, &
@@ -265,7 +267,8 @@ program main
 							cnDistro,&
 							cnDistroInt, &
 							doyDistroInt, &
-							cropIdsInt)
+							cropIdsInt, &
+							prawDistro)
 		
 		! write crop parameters
 		CALL writeCropPars(trim(adjustl(outPath))//delimiter//'CropParam.dat', aCropSeqList)
