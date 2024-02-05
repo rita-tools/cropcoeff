@@ -27,7 +27,7 @@ ky1		= 0.4 	# water stress coefficient for the ini stage
 ky2		= 0.9 	# water stress coefficient for the dev stage 
 ky3		= 1.5 	# water stress coefficient for the mid stage
 ky4		= 0.5 	# water stress coefficient for the end stage
-pRAW		= 0.5 	# parameter to compute RAW
+pRAW		= 0.5 * * 1.0 2.0 2.0	# parameter to compute RAW
 aInterception	= 0.6 	# parameter to calculate interception
 cl_CN		= 2 	# CN class
 Irrigation	= 1     # irrigation (1 = Yes, 0 = No)
