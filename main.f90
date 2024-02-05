@@ -42,6 +42,7 @@ program main
 	Real(dp), dimension(:,:), allocatable :: doyDistro, gddDistro,cropIds, errorCodes
 	Real(dp), dimension(:,:), allocatable :: laiDistro,hcDistro,kcbDistro,adjKcbDistro,srDistro
 	Real(dp), dimension(:,:), allocatable :: kyDistro, cnDistro, fcDistro
+	Real(dp), dimension(:,:), allocatable :: prawDistro
 	
 	integer, dimension(:,:), allocatable :: cropIdsInt, cnDistroInt, doyDistroInt
 	
@@ -203,7 +204,7 @@ program main
 		
 		CALL processWS_v4(aWsList(i), aCropSeqList, Sim%window, Sim%movMeanNum, &
 									gddDistro,doyDistro,cropIds, Sim%checkFutureTemp, Sim%tollerance, Sim%vfactor, &
-									laiDistro,hcDistro,kcbDistro,adjKcbDistro,srDistro,kyDistro, cnDistro, fcDistro, &
+									laiDistro,hcDistro,kcbDistro,adjKcbDistro,srDistro,kyDistro, cnDistro, fcDistro, prawDistro &
 									addLog)
 								
 		selStart =  Sim%window+1 !lbound(doyDistro, DIM = 1)

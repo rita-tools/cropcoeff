@@ -78,7 +78,7 @@ module mod_crop
 		
 		 ! table of GDD [°C], Kcb [-], LAI [-], crop height Hc [m], root depth Sr [m], water stress coefficient Ky (-); hydr condition CNvalue (-), cover fraction fc (-) .
 		 ! Missing values are entered as * 
-		real(dp), dimension(:), pointer :: GDD, Kcb, LAI, Hc, Sr, Ky, CNvalue, fc
+		real(dp), dimension(:), pointer :: GDD, Kcb, LAI, Hc, Sr, Ky, CNvalue, fc,praw_list
 	end type Crop
 	
 end module mod_crop

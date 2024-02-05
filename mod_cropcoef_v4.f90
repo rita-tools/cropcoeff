@@ -451,6 +451,7 @@ module mod_cropcoef_v4
 														cropList, &
 														DoY,cropsOverYear,T_GDD_corr, cropInField, &
 														lai, hc,kcb, adjKcb, sr, ky, cn, fc, &
+														praw, &
 														printFun)
 												
 		Real(dp), intent(in) :: wsLat
@@ -460,7 +461,7 @@ module mod_cropcoef_v4
 		type(Crop), Intent(in), dimension(:) :: cropList
 		
 		integer, intent(out), dimension(:), allocatable :: DoY,cropsOverYear,cropInField
-		real(dp), intent(out), dimension(:), allocatable :: T_GDD_corr, lai, hc,kcb,adjKcb, sr, ky, cn, fc
+		real(dp), intent(out), dimension(:), allocatable :: T_GDD_corr, lai, hc,kcb,adjKcb, sr, ky, cn, fc, praw
 				
 		integer :: nOfDays, i,  c, s, e, timeSpan, harvestGDDIdx
 		integer, dimension(:), allocatable :: sowIndex, maxHarvestIndex
@@ -484,6 +485,7 @@ module mod_cropcoef_v4
 		! make a list of crops in field
 		allocate(cropsOverYear(nOfDays),T_GDD_corr(nOfDays), cropInField(nOfDays))
 		allocate(lai(nOfDays), hc(nOfDays),kcb(nOfDays),adjKcb(nOfDays), sr(nOfDays), ky(nOfDays), cn(nOfDays), fc(nOfDays))
+		allocate(praw(nOfDays))
 		cropInField = 1.
 		cropsOverYear = 0 ! crops always has id from 1
 		T_GDD_corr = 0.
@@ -495,6 +497,8 @@ module mod_cropcoef_v4
 		ky = nodatar
 		cn = nodatar
 		fc = nodatar
+		
+		praw = nodatar
 
 		!print*, 'min lai after allocation: ', minval(lai)
 				
@@ -520,6 +524,9 @@ module mod_cropcoef_v4
 			parKy = repeatPars(cropList(c)%Ky, cropList(c)%HarvNum_max, .false.)
 			parCNvalue = repeatPars(cropList(c)%CNvalue, cropList(c)%HarvNum_max, .false.)
 			parFc = repeatPars(cropList(c)%fc, cropList(c)%HarvNum_max, .false.)
+			
+			parPRAW = repeatPars(cropList(c)%praw_list, cropList(c)%HarvNum_max, .false.)
+			
 			
 			maxGDD = maxval(parGDD)
 			
@@ -696,7 +703,14 @@ module mod_cropcoef_v4
 				fc(s:e) = fillMissingL(fc(s:e))
 				if ((s-1)>0) fc(s-1) = minval(parFc)
 				if ((e+1)<nOfDays) fc(e+1) = minval(parFc)
-								
+				
+				call printFun('*** Assign pRAW ***')
+				praw(s:e) = computeParamsDistro_v4(GDD_cum_sub, parGDD, parPRAW,printFun)
+				praw(s:e) = fillMissingK(praw(s:e))
+				if ((s-1)>0) praw(s-1) = minval(parPRAW)
+				if ((e+1)<nOfDays) praw(e+1) = minval(parPRAW)
+				
+
 			end do
 			
 			call printFun('### end crop ###')
@@ -708,7 +722,7 @@ module mod_cropcoef_v4
 	subroutine processWS_v4(aWeatherStation,aCropSeqList, window,movMeanNum, &
 										gddDistro,doyDistro,cropIds,checkFutureTemp, tollerance, vfactor, &
 										laiDistro,hcDistro,kcbDistro,adjKcbDistro,srDistro,&
-										kyDistro,cnDistro,fcDistro,&
+										kyDistro,cnDistro,fcDistro,prawDistro,&
 										printFun)
 		implicit none
 			
@@ -717,7 +731,7 @@ module mod_cropcoef_v4
 		integer, intent(in) :: movMeanNum
 		Real(dp), dimension(:,:), intent(inout),allocatable :: gddDistro,doyDistro,cropIds ! for debug
 		Real(dp), dimension(:,:), intent(inout),allocatable :: laiDistro,hcDistro,kcbDistro,adjKcbDistro,srDistro
-		Real(dp), dimension(:,:), intent(inout),allocatable :: kyDistro, cnDistro, fcDistro
+		Real(dp), dimension(:,:), intent(inout),allocatable :: kyDistro, cnDistro, fcDistro, prawDistro
 		integer, intent(inOUT) :: window
 		logical, intent(in) :: checkFutureTemp
 		real(dp), Intent(in) :: tollerance, vfactor
@@ -725,7 +739,7 @@ module mod_cropcoef_v4
 		
 		integer, dimension(:), allocatable :: DoY,cropsOverYear,cropInField
 		REAL(dp), dimension(:), allocatable :: T_GDD_corr, TmaxExt, TminExt, RHminExt, WindExt
-		REAL(dp), dimension(:), allocatable :: lai, hc,kcb, adjKcb, sr, ky, cn, fc
+		REAL(dp), dimension(:), allocatable :: lai, hc,kcb, adjKcb, sr, ky, cn, fc, praw
 		LOGICAL:: debug
 		
 		type(date) :: extStartDate
@@ -770,7 +784,8 @@ module mod_cropcoef_v4
 						srDistro(nOfDays,nOfCropSeq),&
 						kyDistro(nOfDays,nOfCropSeq),&
 						cnDistro(nOfDays,nOfCropSeq),&
-						fcDistro(nOfDays,nOfCropSeq))
+						fcDistro(nOfDays,nOfCropSeq),&
+						prawDistro(nOfDays,nOfCropSeq))
 						
 		gddDistro = 0.
 		doyDistro = 0.
@@ -783,6 +798,7 @@ module mod_cropcoef_v4
 		kyDistro = nodatar
 		cnDistro = nodatar
 		fcDistro = nodatar
+		prawDistro = nodatar
 		
 		!print *, 'Max val CN distro 0: ',maxval(cnDistro)
 		
@@ -799,7 +815,7 @@ module mod_cropcoef_v4
 												RHminExt, WindExt, &
 												aCropSeqList(j)%cropList, &
 												DoY,cropsOverYear,T_GDD_corr, cropInField, &
-												lai, hc,kcb, adjKcb, sr, ky, cn, fc, &
+												lai, hc,kcb, adjKcb, sr, ky, cn, fc, praw, &
 												printFun)
 												
 											
@@ -814,6 +830,7 @@ module mod_cropcoef_v4
 			kyDistro(:,j) = ky
 			cnDistro(:,j) = cn
 			fcDistro(:,j) = fc
+			prawDistro(:,j) = praw
 			
 			!print *, 'Max val CN distro 1: ',maxval(cnDistro(:,j))
 			
@@ -826,6 +843,7 @@ module mod_cropcoef_v4
 			kyDistro(:,j) = fillMissingL(kyDistro(:,j))
 			cnDistro(:,j) = fillMissingK(cnDistro(:,j))
 			fcDistro(:,j) = fillMissingL(fcDistro(:,j))
+			prawDistro(:,j) = fillMissingK(prawDistro(:,j))
 			
 			! set empty array to zeros
 			!print *, 'Max val CN distro 2: ',maxval(cnDistro(:,j))
@@ -842,6 +860,7 @@ module mod_cropcoef_v4
 			srDistro(:,j) = srDistro(:,j)*cropInField
 			kyDistro(:,j) = kyDistro(:,j)*cropInField
 			cnDistro(:,j) = cnDistro(:,j)*cropInField
+			prawDistro(:,j) = prawDistro(:,j)*cropInField
 			if (maxval(fcDistro(:,j))/=nodatar) then
 				! clean only if there are valid values (not nodatar)
 				fcDistro(:,j) = fcDistro(:,j)*cropInField

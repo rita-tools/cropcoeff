@@ -271,7 +271,8 @@ module mod_io_file
 		aCrop%fileName = parFilePath
 		
 		allocate(aCrop%GDD(maxlength), aCrop%Kcb(maxlength), aCrop%LAI(maxlength), aCrop%Hc(maxlength), &
-						aCrop%Sr(maxlength),aCrop%Ky(maxlength), aCrop%CNvalue(maxlength), aCrop%fc(maxlength))
+						aCrop%Sr(maxlength),aCrop%Ky(maxlength), aCrop%CNvalue(maxlength), aCrop%fc(maxlength),&
+						aCrop%praw_list(maxlength))
 		
         do while (ios == 0)
             read (free_unit, '(A)', iostat=ios) buffer
@@ -354,7 +355,10 @@ module mod_io_file
 						case('ky4')
 							aCrop%ky4 = strToReal(buffer)
 						case('praw')
-							aCrop%pRAW = strToReal(buffer)
+							buffer = trim(replaceText(buffer,'*',trim(realToStr(nodatar))))
+							read(buffer,*,iostat=ie) aCrop%praw_list
+							print*,'praw_list =',aCrop%praw_list
+							aCrop%pRAW = praw_list(1) !strToReal(buffer)
 						case('ainterception')
 							aCrop%aInterception = strToReal(buffer)
 						case('cl_cn')
@@ -451,6 +455,8 @@ module mod_io_file
 		aCrop%Sr = fillMissingL(aCrop%Sr, aCrop%GDD)
 		aCrop%Ky = fillMissingL(aCrop%Ky, aCrop%GDD)
 		aCrop%fc = fillMissingL(aCrop%fc, aCrop%GDD)
+		
+		aCrop%praw_list = fillMissingK(aCrop%praw_list, aCrop%GDD)
 		
 		! adjust CN
 		do i=1, size(aCrop%Kcb)
