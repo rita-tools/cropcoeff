@@ -42,7 +42,7 @@ program main
     Real(dp), dimension(:,:), allocatable :: doyDistro, gddDistro,cropIds, errorCodes
     Real(dp), dimension(:,:), allocatable :: laiDistro,hcDistro,kcbDistro,adjKcbDistro,srDistro
     Real(dp), dimension(:,:), allocatable :: kyDistro, cnDistro, fcDistro
-    Real(dp), dimension(:,:), allocatable :: prawDistro
+    Real(dp), dimension(:,:), allocatable :: r_stressDistro
     
     integer, dimension(:,:), allocatable :: cropIdsInt, cnDistroInt, doyDistroInt
     
@@ -202,7 +202,7 @@ program main
         
         CALL processWS_v4(aWsList(i), aCropSeqList, Sim%window, Sim%movMeanNum, &
                                     gddDistro,doyDistro,cropIds, Sim%checkFutureTemp, Sim%tollerance, Sim%vfactor, &
-                                    laiDistro,hcDistro,kcbDistro,adjKcbDistro,srDistro,kyDistro, cnDistro, fcDistro, prawDistro, &
+                                    laiDistro,hcDistro,kcbDistro,adjKcbDistro,srDistro,kyDistro, cnDistro, fcDistro, r_stressDistro, &
                                     addLog)
                                 
         selStart =  Sim%window+1 !lbound(doyDistro, DIM = 1)
@@ -249,8 +249,8 @@ program main
                                     kyDistro, selStart,selEnd, realFormat, ErrorFlag)
         call writeRealResults(trim(adjustl(outPath))//delimiter//'fc.dat',&
                             fcDistro, selStart,selEnd, realFormat, ErrorFlag)
-        call writeRealResults(trim(adjustl(outPath))//delimiter//'praw.dat',&
-                            prawDistro, selStart,selEnd, realFormat, ErrorFlag)
+        call writeRealResults(trim(adjustl(outPath))//delimiter//'r_stress.dat',&
+                            r_stressDistro, selStart,selEnd, realFormat, ErrorFlag)
     
         deallocate(gddDistro,&
                             doyDistro, &
@@ -266,7 +266,7 @@ program main
                             cnDistroInt, &
                             doyDistroInt, &
                             cropIdsInt, &
-                            prawDistro)
+                            r_stressDistro)
         
         ! write crop parameters
         CALL writeCropPars(trim(adjustl(outPath))//delimiter//'CropParam.dat', aCropSeqList)

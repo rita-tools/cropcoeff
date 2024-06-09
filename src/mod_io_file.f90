@@ -272,10 +272,10 @@ module mod_io_file
         
         allocate(aCrop%GDD(maxlength), aCrop%Kcb(maxlength), aCrop%LAI(maxlength), aCrop%Hc(maxlength), &
                         aCrop%Sr(maxlength),aCrop%Ky(maxlength), aCrop%CNvalue(maxlength), aCrop%fc(maxlength),&
-                        aCrop%praw_list(maxlength))
+                        aCrop%r_stress(maxlength))
                         
         ! init variable
-        aCrop%praw_list = nodatar
+        aCrop%r_stress = nodatar
         
         do while (ios == 0)
             read (free_unit, '(A)', iostat=ios) buffer
@@ -359,9 +359,7 @@ module mod_io_file
                             aCrop%ky4 = strToReal(buffer)
                         case('praw')
                             buffer = trim(replaceText(buffer,'*',trim(realToStr(nodatar))))
-                            read(buffer,*,iostat=ie) aCrop%praw_list
-                            print*,'praw_list =',aCrop%praw_list
-                            aCrop%pRAW = aCrop%praw_list(1) !strToReal(buffer)
+                            read(buffer,*,iostat=ie) aCrop%pRaw
                         case('ainterception')
                             aCrop%aInterception = strToReal(buffer)
                         case('cl_cn')
@@ -381,20 +379,24 @@ module mod_io_file
                             !print *,'init table 5'
                             ncols = 5
                             i=1
-                        case('gdd kcb lai hc sr ky')
+                        case('gdd kcb lai hc sr cn')
                             ! start reading 6xcols table
                             !print *,'init table 6'
                             ncols = 6
                             i=1
-                        case('gdd kcb lai hc sr ky cn')
+                        case('gdd kcb lai hc sr cn fc')
                             ! start reading 7xcols table
                             !print *,'init table 7'
                             ncols = 7
                             i=1
-                        case('gdd kcb lai hc sr ky cn fc')
+                        case('gdd kcb lai hc sr cn fc r_stress')
                             ! start reading 8xcols table
                             !print *,'init table 8'
                             ncols = 8
+                            i=1
+                        case('gdd kcb lai hc sr cn fc r_stress ky')
+                            ! start reading 9xcols table
+                            ncols = 9
                             i=1
                         CASE('endtable')
                             i=i-1 ! update row counter
@@ -408,33 +410,44 @@ module mod_io_file
                     !print *,'read row 5',trim(label)
                     buffer = trim(replaceText(label,'*',trim(realToStr(nodatar))))
                     read(buffer,*,iostat=ie) aCrop%GDD(i), aCrop%Kcb(i), aCrop%LAI(i), aCrop%Hc(i), aCrop%Sr(i)
-                    ! set Ky to nodata
-                    aCrop%Ky(i) = nodatar
                     aCrop%CNvalue(i) = nodatar
                     aCrop%fc(i) = nodatar
+                    aCrop%r_stress(i) = 0.0D0
+                    aCrop%Ky(i) = nodatar
                     i=i+1
                 ELSEif (ncols == 6) then
                     !print *,'read row 6'
                     buffer = trim(replaceText(label,'*',trim(realToStr(nodatar))))
-                    read(buffer,*) aCrop%GDD(i), aCrop%Kcb(i), aCrop%LAI(i), aCrop%Hc(i), aCrop%Sr(i),aCrop%Ky(i)
-                    aCrop%CNvalue(i) = nodatar
+                    read(buffer,*) aCrop%GDD(i), aCrop%Kcb(i), aCrop%LAI(i), aCrop%Hc(i), aCrop%Sr(i),aCrop%CNvalue(i)
                     aCrop%fc(i) = nodatar
+                    aCrop%r_stress(i) = 0.0D0
+                    aCrop%Ky(i) = nodatar
                     i=i+1
                 ELSEif (ncols == 7) then
                     !print *,'read row 7'
                     buffer = trim(replaceText(label,'*',trim(realToStr(nodatar))))
-                    read(buffer,*) aCrop%GDD(i), aCrop%Kcb(i), aCrop%LAI(i), aCrop%Hc(i), aCrop%Sr(i),aCrop%Ky(i),aCrop%CNvalue(i)
-                    aCrop%fc(i) = nodatar
+                    read(buffer,*) aCrop%GDD(i), aCrop%Kcb(i), aCrop%LAI(i), aCrop%Hc(i), aCrop%Sr(i),aCrop%CNvalue(i),aCrop%fc(i)
+                    aCrop%r_stress(i) = 0.0D0
+                    aCrop%Ky(i) = nodatar
                     i=i+1
                 ELSEif (ncols == 8) then
                     !print *,'read row 8'
                     buffer = trim(replaceText(label,'*',trim(realToStr(nodatar))))
                     read(buffer,*) aCrop%GDD(i), aCrop%Kcb(i), aCrop%LAI(i), aCrop%Hc(i), aCrop%Sr(i),&
-                                            aCrop%Ky(i),&
                                             aCrop%CNvalue(i),&
-                                            aCrop%fc(i)
+                                            aCrop%fc(i),&
+                                            aCrop%r_stress(i)
+                    aCrop%Ky(i) = nodatar
                     i=i+1
-                    
+                ELSEif (ncols == 9) then
+                        !print *,'read row 8'
+                        buffer = trim(replaceText(label,'*',trim(realToStr(nodatar))))
+                        read(buffer,*) aCrop%GDD(i), aCrop%Kcb(i), aCrop%LAI(i), aCrop%Hc(i), aCrop%Sr(i),&
+                                                aCrop%CNvalue(i),&
+                                                aCrop%fc(i),&
+                                                aCrop%r_stress(i),&
+                                                aCrop%Ky(i)
+                        i=i+1 
                 end if
             end if
         end do
@@ -451,7 +464,7 @@ module mod_io_file
         call resizeArray(aCrop%CNvalue,i)
         call resizeArray(aCrop%fc,i)
         
-        CALL resizeArray(aCrop%praw_list,i)
+        CALL resizeArray(aCrop%r_stress,i)
         
         ! replace nodata with interpolated values
         aCrop%Kcb = fillMissingL(aCrop%Kcb, aCrop%GDD)
@@ -461,7 +474,7 @@ module mod_io_file
         aCrop%Ky = fillMissingL(aCrop%Ky, aCrop%GDD)
         aCrop%fc = fillMissingL(aCrop%fc, aCrop%GDD)
         
-        aCrop%praw_list = fillMissingK(aCrop%praw_list)
+        aCrop%r_stress = fillMissingL(aCrop%r_stress) ! use linear because plant stress resistance can gradually change according to the maturity
         
         ! adjust CN
         do i=1, size(aCrop%Kcb)
@@ -547,10 +560,10 @@ module mod_io_file
         print *, 'fraction of root in the transpirative layer', aCrop%RFt
 
         print *
-        print *, "i GDD  Kcb LAI Hc Sr Ky cn fc praw"
+        print *, "i GDD  Kcb LAI Hc Sr Ky cn fc r_stress"
         do i=1, size(aCrop%GDD)
            print *, i, aCrop%GDD(i), aCrop%Kcb(i), aCrop%LAI(i), aCrop%Hc(i), aCrop%Sr(i),&
-                            aCrop%Ky(i),aCrop%CNvalue(i),aCrop%fc(i),aCrop%praw_list(i)
+                            aCrop%Ky(i),aCrop%CNvalue(i),aCrop%fc(i),aCrop%r_stress(i)
         end do
         
         print*

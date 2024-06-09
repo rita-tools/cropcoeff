@@ -76,9 +76,9 @@ module mod_crop
         real(dp) :: Kt = 1. ! fraction of root in the transpirative layer [obsolete]
         real(dp) ::  RFt = 1. ! fraction of root in the transpirative layer
         
-         ! table of GDD [°C], Kcb [-], LAI [-], crop height Hc [m], root depth Sr [m], water stress coefficient Ky (-); hydr condition CNvalue (-), cover fraction fc (-) .
+         ! table of GDD [°C], Kcb [-], LAI [-], crop height Hc [m], root depth Sr [m], water stress coefficient Ky (-); hydr condition CNvalue (-), cover fraction fc (-), resistance to stress r_stress (-) .
          ! Missing values are entered as * 
-        real(dp), dimension(:), pointer :: GDD, Kcb, LAI, Hc, Sr, Ky, CNvalue, fc,praw_list
+        real(dp), dimension(:), pointer :: GDD, Kcb, LAI, Hc, Sr, Ky, CNvalue, fc, r_stress
     end type Crop
     
 end module mod_crop

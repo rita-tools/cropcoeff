@@ -32,7 +32,7 @@ aInterception	= 0.6 	# parameter to calculate interception
 cl_CN		= 5 	# CN class
 Irrigation	= 1     # irrigation (1 = Yes, 0 = No)
 # table of GDD [°C], Kcb [-], LAI [-], crop height [m], root depth [m]; missing values are entered as * 
-GDD	Kcb LAI	Hc	Sr
+GDD	Kcb LAI	Hc Sr
 150 0.3 0.5 0.5 1
 250 1.15 * 0.7 *
 600 1.15 3 * *
