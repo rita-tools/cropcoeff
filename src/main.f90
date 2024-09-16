@@ -28,6 +28,7 @@ program main
     USE mod_cropcoef_v4
     USE mod_crop
     USE mod_utilities
+    use mod_system
 
     implicit none
     
@@ -54,8 +55,6 @@ program main
     character(len=55) :: int_to_char
     integer :: i, j, r, c, nOfCropSeq, window, nOfWS
     Integer :: selStart, selEnd
-    character :: delimiter
-    character(len=10) :: makedir
     logical :: dir_exists
         
     ! Inizialize 
@@ -63,21 +62,8 @@ program main
     verbose = .false.
     settingsFileName = 'cropcoef.txt'
 
-    ! without indentation
-    
-    delimiter = '\' ! for win, update this if compile under other OS
-    makedir = 'md'
+    call print_header()
 
-!~ #ifdef _WIN32
-!~ delimiter = '\' ! for win, update this if compile under other OS
-!~ makedir = 'md'
-!~ #elif __unix__
-!~ delimiter = '/'
-!~ makedir = 'mkdir'
-!~ #endif
-
-    ! print*,'Using delimeter:',delimiter
-    ! print*,'Using make dir command:',makedir
     ! Upload default values for directories and files
     call makeDefault(Sim)
     
@@ -126,7 +112,7 @@ program main
         print *,'The directory ', trim(Sim%pheno_outpath), ' already exists and will be updated'
     else
         print*,'Create folder ',trim(adjustl(Sim%pheno_outpath))
-        call system(trim(makedir)//" "//trim(Sim%pheno_outpath))!
+        call make_dir(trim(Sim%pheno_outpath))
     end if
     
     
@@ -191,8 +177,7 @@ program main
             print *,'The directory ', trim(outPath), ' already exists and will be updated'
         else
             print*,'Create folder ',trim(adjustl(outPath))
-            !print *,trim(makedir)//" "//trim(outPath)
-            call system(trim(makedir)//" "//trim(outPath))!
+            call make_dir(trim(outPath))
         end if
         
         ! open log file
@@ -287,10 +272,21 @@ end program
 subroutine show_help()
     print *, '===== Crop_coeff v. 5.0 ====='
     print *, 'List of options:'
-    print *, '-h, -help: return some helpfull information'
+    print *, '-h, -help: return some helpful information'
     print *, '-v, -verbose: print all outputs'
     print *, '-f, -file: set the filename of the simulation parameters'
     print *, '====================='
     ! stop execution to prevent errors !
     STOP
 end subroutine
+
+subroutine print_header()
+    ! use makefile macros to set version and compilation timestamp
+    print *, '============== IDRAGRA - IDRologia AGRAria mod. cropcoef ================'
+    print *, 'contact: claudio.gandolfi@unimi.it'
+    print *, 'code version: ',GIT_VERSION
+    print *, 'compiled on: ',COMP_DATE
+    print *, 'source available on https://github.com/rita-tools/cropcoeff'
+    print *, '============================================================'
+    print *, ''
+end subroutine print_header
