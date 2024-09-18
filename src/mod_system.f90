@@ -8,7 +8,7 @@ module mod_system
     contains
 
     subroutine make_dir(path)
-        character(200), intent(in) :: path
+        character(*), intent(in) :: path
 ! don't indent macro!!!
 #if WIN == 1
         mkdir_cmd = 'mkdir'
