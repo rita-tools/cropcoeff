@@ -30,6 +30,7 @@ module mod_io_file
     use mod_weather_station
     USE mod_cropseq
     use mod_productivity
+    use mod_system
     implicit none
     
     integer::log_unit = -1

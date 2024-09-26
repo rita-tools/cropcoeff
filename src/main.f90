@@ -64,6 +64,8 @@ program main
 
     call print_header()
 
+    !call print_os_settings()
+
     ! Upload default values for directories and files
     call makeDefault(Sim)
     
@@ -169,7 +171,6 @@ program main
         write(int_to_char,*) aWsList(i)%wsId
         
         outPath = trim(Sim%pheno_outpath)//delimiter//trim(Sim%pheno_root)//trim(adjustl(int_to_char))
-        
         
         ! check if the dir exists or make a new dir
         inquire(file=trim(outPath), exist=dir_exists)   ! dir_exists will be TRUE if the directory exists
