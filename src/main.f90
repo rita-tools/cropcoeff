@@ -28,6 +28,7 @@ program main
     USE mod_cropcoef_v4
     USE mod_crop
     USE mod_utilities
+    USE mod_et0
     use mod_system
 
     implicit none
@@ -44,6 +45,7 @@ program main
     Real(dp), dimension(:,:), allocatable :: laiDistro,hcDistro,kcbDistro,adjKcbDistro,srDistro
     Real(dp), dimension(:,:), allocatable :: kyDistro, cnDistro, fcDistro
     Real(dp), dimension(:,:), allocatable :: r_stressDistro
+    Real(dp), dimension(:,:), allocatable :: et0Distro
     
     integer, dimension(:,:), allocatable :: cropIdsInt, cnDistroInt, doyDistroInt
     
@@ -158,6 +160,8 @@ program main
     CALL writeCanResistance(trim(sim%pheno_outpath)//delimiter//trim(sim%canres_filename),yearList, canResList)
     
     nOfWS = size(aWsList,dim=1)
+
+        
     ! start loop to run crop coef for each station
     do i=1,nOfWS
         print*, 'processing ', trim(adjustl(aWsList(i)%fileName))
@@ -190,6 +194,8 @@ program main
                                     gddDistro,doyDistro,cropIds, Sim%checkFutureTemp, Sim%tollerance, Sim%vfactor, &
                                     laiDistro,hcDistro,kcbDistro,adjKcbDistro,srDistro,kyDistro, cnDistro, fcDistro, r_stressDistro, &
                                     addLog)
+        
+        call calc_et0(aWsList(i),aCropSeqList,canResList(1),et0Distro)
                                 
         selStart =  Sim%window+1 !lbound(doyDistro, DIM = 1)
         selEnd =  aWsList(i)%numOfDays+Sim%window !ubound(doyDistro, DIM = 1)
@@ -218,6 +224,8 @@ program main
                                         cropIdsInt, selStart,selEnd, intFormat, ErrorFlag)
             call writeRealResults(trim(adjustl(outPath))//delimiter//'Kcb_plain.dat',&
                                         kcbDistro, selStart,selEnd, realFormat, ErrorFlag)
+            call writeRealResults(trim(adjustl(outPath))//delimiter//'et0.dat',&
+                                        et0Distro, lbound(et0Distro,1),ubound(et0Distro,1), realFormat, ErrorFlag)
         end if
         
         ! useful outputs
@@ -252,7 +260,8 @@ program main
                             cnDistroInt, &
                             doyDistroInt, &
                             cropIdsInt, &
-                            r_stressDistro)
+                            r_stressDistro, &
+                            et0Distro)
         
         ! write crop parameters
         CALL writeCropPars(trim(adjustl(outPath))//delimiter//'CropParam.dat', aCropSeqList)
