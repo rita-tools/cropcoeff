@@ -497,7 +497,7 @@ module mod_io_file
         end do
         
         ! DON'T adjust cf: negative value says to idragra to calculate it according to the formula
-                
+
     end subroutine read_crop_par
 
 
@@ -975,7 +975,8 @@ module mod_io_file
         !character(len=max_plen) :: keStr ![obsolete]
         !character(len=max_plen) :: ktStr ![obsolete]
         character(len=max_plen) :: rftStr
-        
+        character(len=max_plen) :: maxSrStr
+                
         ErrorFlag = 0
 
         call SeekUN( ErrorFlag, free_unit) !Look for a free unit
@@ -1003,6 +1004,7 @@ module mod_io_file
         !keStr = 'Ke' ![obsolete]
         !ktStr = 'Kt' ![obsolete]
         rftStr = 'RFt'
+        maxSrStr = 'maxSr'
         
         do i=1, size(aCropSeqList,1)
             aCropSeq = aCropSeqList(i)
@@ -1023,6 +1025,7 @@ module mod_io_file
                 !keStr = trim(adjustl(keStr))//achar(9)//trim(adjustl(realToStr(aCropSeq%cropList(j)%Ke))) ![obsolete]
                 !ktStr = trim(adjustl(ktStr))//achar(9)//trim(adjustl(realToStr(aCropSeq%cropList(j)%Kt))) ![obsolete]
                 rftStr = trim(adjustl(rftStr))//achar(9)//trim(adjustl(realToStr(aCropSeq%cropList(j)%RFt)))
+                maxSrStr = trim(adjustl(maxSrStr))//achar(9)//trim(adjustl(realToStr(maxval(aCropSeq%cropList(j)%Sr))))
             end do
         end do
         
@@ -1042,6 +1045,7 @@ module mod_io_file
         !write(free_unit,'(a)') trim(adjustl(keStr))//achar(9)
         !write(free_unit,'(a)') trim(adjustl(ktStr))//achar(9)
         write(free_unit,'(a)') trim(adjustl(rftStr))//achar(9)
+        write(free_unit,'(a)') trim(adjustl(maxSrStr))//achar(9)
 
         close(free_unit)
         

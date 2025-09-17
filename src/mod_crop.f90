@@ -74,7 +74,7 @@ module mod_crop
         
         real(dp) :: Ke = 0. ! fraction of root in the evaporative layer [obsolete]
         real(dp) :: Kt = 1. ! fraction of root in the transpirative layer [obsolete]
-        real(dp) ::  RFt = 1. ! fraction of root in the transpirative layer
+        real(dp) :: RFt = 1. ! fraction of root in the transpirative layer
         
          ! table of GDD [°C], Kcb [-], LAI [-], crop height Hc [m], root depth Sr [m], water stress coefficient Ky (-); hydr condition CNvalue (-), cover fraction fc (-), resistance to stress r_stress (-) .
          ! Missing values are entered as * 
