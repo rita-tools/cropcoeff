@@ -1,3 +1,5 @@
+623db89 (Now treats crops with 0 maxGDD as baresoil, 2026-07-24)
+3c6d343 (Now always prints cropId.dat, 2026-07-24)
 23c013d (add maximum crop root depth as output parameters, 2025-09-17)
 5c78379 (add et0 as output, 2025-09-17)
 5aa21aa (create git log next to the program, 2025-02-13)

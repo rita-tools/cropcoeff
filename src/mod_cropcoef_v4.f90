@@ -31,6 +31,7 @@ module mod_cropcoef_v4
     USE mod_weather_station
     uSE mod_settings
     use mod_productivity
+    use mod_truncation_warnings, only: recordCropTruncationWarning, warning_early_harvest, warning_not_sown
     
     implicit none
 
@@ -450,7 +451,7 @@ module mod_cropcoef_v4
 
     subroutine computeCropSeq_v4(wsLat, startDay, Tmax, Tmin, movMeanNum, &
                                                         RHmin, Wind, &
-                                                        cropList, &
+                                                        cropList, weatherStationId, landUseId, &
                                                         DoY,cropsOverYear,T_GDD_corr, cropInField, &
                                                         lai, hc,kcb, adjKcb, sr, ky, cn, fc, &
                                                         r_stress, &
@@ -459,7 +460,7 @@ module mod_cropcoef_v4
         Real(dp), intent(in) :: wsLat
         type(date), intent(in) :: startDay
         Real(dp), intent(in), dimension(:) :: Tmax, Tmin, RHmin, Wind
-        integer, intent(in) :: movMeanNum
+        integer, intent(in) :: movMeanNum, weatherStationId, landUseId
         type(Crop), Intent(in), dimension(:) :: cropList
         
         integer, intent(out), dimension(:), allocatable :: DoY,cropsOverYear,cropInField
@@ -471,6 +472,7 @@ module mod_cropcoef_v4
         real(dp), dimension(:), allocatable :: Tave, DLH,Tmax_sub,Tmin_sub,Tave_sub,DLH_sub
         real(dp), dimension(:), allocatable :: T_GDD_sub,GDD_cum_sub, T_GDD_corr_sub,VF_sub, PF_sub
         integer, dimension(:), allocatable ::  rows
+        type(date) :: sowingDate
         
         real(dp), dimension(:), allocatable :: parGDD, parKcb, parLAI, parHc, parSr, parKy, parCNvalue, parFc, par_r_stress
         
@@ -530,7 +532,6 @@ module mod_cropcoef_v4
 
             ! %PS% Zero-GDD parameter files are treated as baresoil to make sure that any cropId /= 0 is an actual crop.
             if (maxGDD <= 0.0_dp) then
-                print *, "Crop "//trim(cropList(c)%cropName)//" has maxGDD <= 0 and will hence be treated as baresoil."
                 cycle
             end if
             
@@ -638,8 +639,10 @@ module mod_cropcoef_v4
                 if (cropList(c)%CropsOverlap > 0) then
                     bare_soil_start = max(1, s-cropList(c)%CropsOverlap)
                 end if
+                sowingDate = addDays(startDay,s-1)
                 call truncateOverlappingCrops(cropInField, cropsOverYear, bare_soil_start, &
-                                           s, e, cropList, cropList(c), printFun)
+                                           s, e, cropList, cropList(c), landUseId, &
+                                           weatherStationId, sowingDate%year, printFun)
                 if (cropList(c)%CropsOverlap > 0) then
                     if (bare_soil_start <= s-1) then
                         cropInField(bare_soil_start:s-1) = 0
@@ -798,7 +801,8 @@ module mod_cropcoef_v4
             CALL computeCropSeq_v4(aWeatherStation%wsLat, extStartDate,&
                                                 TmaxExt, TminExt,movMeanNum, &
                                                 RHminExt, WindExt, &
-                                                aCropSeqList(j)%cropList, &
+                                                aCropSeqList(j)%cropList, aWeatherStation%wsId, &
+                                                aCropSeqList(j)%cropSeqId, &
                                                 DoY,cropsOverYear,T_GDD_corr, cropInField, &
                                                 lai, hc,kcb, adjKcb, sr, ky, cn, fc, r_stress, &
                                                 printFun)
@@ -935,14 +939,15 @@ module mod_cropcoef_v4
 
     ! %PS% Remove complete crop tails affected by a later crop and warn the user.
     subroutine truncateOverlappingCrops(cropInField, cropsOverYear, overwriteStart,   &
-                                      & sowingDay, overwriteEnd, cropList, new_crop, printFun)
+                                      & sowingDay, overwriteEnd, cropList, new_crop,   &
+                                      & landUseId, weatherStationId, calendarYear, printFun)
         integer, dimension(:), intent(inout) :: cropInField, cropsOverYear
         integer, intent(in) :: overwriteStart, sowingDay, overwriteEnd
+        integer, intent(in) :: landUseId, weatherStationId, calendarYear
         type(Crop), dimension(:), intent(in) :: cropList
         type(Crop), intent(in) :: new_crop
         type(Crop) :: previous_crop
-        integer :: i, j, segmentStart, segmentEnd, previousCropId, daysCut
-        character(len=4*maxlength) :: msg, details
+        integer :: i, j, segmentStart, segmentEnd, previousCropId, warningKind
 
         procedure(print_interface) :: printFun
 
@@ -963,7 +968,6 @@ module mod_cropcoef_v4
                 i = i + 1
             end do
             segmentEnd = i - 1
-            daysCut = segmentEnd - segmentStart + 1
 
             previous_crop%cropName = 'unknown crop'
             do j=1,size(cropList)
@@ -974,26 +978,14 @@ module mod_cropcoef_v4
             end do
 
             if (sowingDay < segmentStart) then
-                msg = 'WARNING: '//trim(previous_crop%cropName)//' was not sown to make space for '//trim(new_crop%cropName)
-                details = trim(adjustl(intToStr(daysCut)))//' scheduled days removed: days '// &
-                          trim(adjustl(intToStr(segmentStart)))//' to '//trim(adjustl(intToStr(segmentEnd)))// &
-                          '; new crop sown on day '//trim(adjustl(intToStr(sowingDay)))
+                warningKind = warning_not_sown
             else
-                msg = 'WARNING: '//trim(previous_crop%cropName)//' was harvested early to make space for '//trim(new_crop%cropName)
-                if (daysCut==1) then
-                    details = '1 day cut: day '//trim(adjustl(intToStr(segmentStart)))// &
-                              '; new crop sown on day '//trim(adjustl(intToStr(sowingDay)))
-                else
-                    details = trim(adjustl(intToStr(daysCut)))//' days cut: days '// &
-                              trim(adjustl(intToStr(segmentStart)))//' to '//trim(adjustl(intToStr(segmentEnd)))// &
-                              '; new crop sown on day '//trim(adjustl(intToStr(sowingDay)))
-                end if
+                warningKind = warning_early_harvest
             end if
 
-            call printFun(trim(msg))
-            call printFun('  '//trim(details))
-            print *, trim(msg)
-            print *, '  '//trim(details)
+            call recordCropTruncationWarning(landUseId, previousCropId, new_crop%cropId, warningKind, &
+                                             previous_crop%cropName, new_crop%cropName, segmentStart,  &
+                                             segmentEnd, sowingDay, weatherStationId, calendarYear, printFun)
 
             cropInField(segmentStart:segmentEnd) = 0
             cropsOverYear(segmentStart:segmentEnd) = 0

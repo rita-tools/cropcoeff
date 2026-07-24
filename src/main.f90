@@ -30,6 +30,8 @@ program main
     USE mod_utilities
     USE mod_et0
     use mod_system
+    use mod_truncation_warnings, only: resetCropTruncationWarnings, &
+                                            printCropTruncationWarningSummary
 
     implicit none
     
@@ -147,6 +149,16 @@ program main
             if (verbose .eqv. .true.) CALL print_crop_par(aCropSeqList(i)%cropList(j))
             
             end do
+
+        ! %PS% Report zero-GDD land uses once, before processing weather stations.
+        do j=1,size(aCropSeqList(i)%cropList)
+            if (maxval(aCropSeqList(i)%cropList(j)%GDD) <= 0.0_dp) then
+                print *, "Crop "//trim(aCropSeqList(i)%cropList(j)%cropName)//" in land-use "// &
+                    trim(adjustl(intToStr(aCropSeqList(i)%cropSeqId)))// &
+                    " has maxGDD <= 0 and will hence be treated as baresoil."
+                exit
+            end if
+        end do
     end do
     
     ! save canopy resistance
@@ -161,6 +173,7 @@ program main
     
     nOfWS = size(aWsList,dim=1)
 
+    call resetCropTruncationWarnings(verbose) ! %PS%
         
     ! start loop to run crop coef for each station
     do i=1,nOfWS
@@ -276,6 +289,7 @@ program main
                                     
     end do
 
+    call printCropTruncationWarningSummary() ! %PS%
     
 end program
 
