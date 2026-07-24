@@ -527,6 +527,12 @@ module mod_cropcoef_v4
             
             
             maxGDD = maxval(parGDD)
+
+            ! %PS% Zero-GDD parameter files are treated as baresoil to make sure that any cropId /= 0 is an actual crop.
+            if (maxGDD <= 0.0_dp) then
+                print *, "Crop "//trim(cropList(c)%cropName)//" has maxGDD <= 0 and will hence be treated as baresoil."
+                cycle
+            end if
             
             ! select the period for sowing
             sowIndex = findSowingDate_v4(Tave,DoY,&
@@ -632,7 +638,7 @@ module mod_cropcoef_v4
                 if (cropList(c)%CropsOverlap > 0) then
                     bare_soil_start = max(1, s-cropList(c)%CropsOverlap)
                 end if
-                call warnCropTruncation(cropInField, cropsOverYear, bare_soil_start, &
+                call truncateOverlappingCrops(cropInField, cropsOverYear, bare_soil_start, &
                                            s, e, cropList, cropList(c), printFun)
                 if (cropList(c)%CropsOverlap > 0) then
                     if (bare_soil_start <= s-1) then
@@ -927,10 +933,10 @@ module mod_cropcoef_v4
 
     end subroutine
 
-    ! Warns the user when a crop is skipped or harvested early to allow the next sowing (considering CropsOverlap)
-    subroutine warnCropTruncation(cropInField, cropsOverYear, overwriteStart,         &
-                                & sowingDay, overwriteEnd, cropList, new_crop, printFun)
-        integer, dimension(:), intent(in) :: cropInField, cropsOverYear
+    ! %PS% Remove complete crop tails affected by a later crop and warn the user.
+    subroutine truncateOverlappingCrops(cropInField, cropsOverYear, overwriteStart,   &
+                                      & sowingDay, overwriteEnd, cropList, new_crop, printFun)
+        integer, dimension(:), intent(inout) :: cropInField, cropsOverYear
         integer, intent(in) :: overwriteStart, sowingDay, overwriteEnd
         type(Crop), dimension(:), intent(in) :: cropList
         type(Crop), intent(in) :: new_crop
@@ -949,7 +955,9 @@ module mod_cropcoef_v4
 
             previousCropId = cropsOverYear(i)
             segmentStart = i
-            do while (i<=min(overwriteEnd,size(cropInField)))
+
+            ! When crop 2 is sown before the end of crop 1, make sure that crop 1 doesn't resume after crop 2 ends (it can reappear only if sown again)
+            do while (i<=size(cropInField))
                 if (cropInField(i)==0 .and. cropsOverYear(i)==0) exit
                 if (cropsOverYear(i)/=previousCropId) exit
                 i = i + 1
@@ -967,28 +975,18 @@ module mod_cropcoef_v4
 
             if (sowingDay < segmentStart) then
                 msg = 'WARNING: '//trim(previous_crop%cropName)//' was not sown to make space for '//trim(new_crop%cropName)
-                details = 'scheduled days '//trim(adjustl(intToStr(segmentStart)))//' to '// &
-                          trim(adjustl(intToStr(segmentEnd)))//' were overwritten by the new crop sown on day '// &
-                          trim(adjustl(intToStr(sowingDay)))
+                details = trim(adjustl(intToStr(daysCut)))//' scheduled days removed: days '// &
+                          trim(adjustl(intToStr(segmentStart)))//' to '//trim(adjustl(intToStr(segmentEnd)))// &
+                          '; new crop sown on day '//trim(adjustl(intToStr(sowingDay)))
             else
                 msg = 'WARNING: '//trim(previous_crop%cropName)//' was harvested early to make space for '//trim(new_crop%cropName)
                 if (daysCut==1) then
-                    details = '1 day cut: '
+                    details = '1 day cut: day '//trim(adjustl(intToStr(segmentStart)))// &
+                              '; new crop sown on day '//trim(adjustl(intToStr(sowingDay)))
                 else
-                    details = trim(adjustl(intToStr(daysCut)))//' days cut: '
-                end if
-                if (segmentEnd < sowingDay) then
-                    details = trim(details)//' days '//trim(adjustl(intToStr(segmentStart)))//' to '// &
-                              trim(adjustl(intToStr(segmentEnd)))//' become bare soil before sowing'
-                else if (segmentStart >= sowingDay) then
-                    details = trim(details)//' days '//trim(adjustl(intToStr(segmentStart)))//' to '// &
-                              trim(adjustl(intToStr(segmentEnd)))//' are overwritten from sowing day '// &
-                              trim(adjustl(intToStr(sowingDay)))
-                else
-                    details = trim(details)//' days '//trim(adjustl(intToStr(segmentStart)))// &
-                              ' to '//trim(adjustl(intToStr(sowingDay-1)))//' become bare soil, and days '// &
-                              trim(adjustl(intToStr(sowingDay)))//' to '//trim(adjustl(intToStr(segmentEnd)))// &
-                              ' are overwritten by the new crop'
+                    details = trim(adjustl(intToStr(daysCut)))//' days cut: days '// &
+                              trim(adjustl(intToStr(segmentStart)))//' to '//trim(adjustl(intToStr(segmentEnd)))// &
+                              '; new crop sown on day '//trim(adjustl(intToStr(sowingDay)))
                 end if
             end if
 
@@ -996,8 +994,11 @@ module mod_cropcoef_v4
             call printFun('  '//trim(details))
             print *, trim(msg)
             print *, '  '//trim(details)
+
+            cropInField(segmentStart:segmentEnd) = 0
+            cropsOverYear(segmentStart:segmentEnd) = 0
         end do
-    end subroutine warnCropTruncation
+    end subroutine truncateOverlappingCrops
     
 end module
 
