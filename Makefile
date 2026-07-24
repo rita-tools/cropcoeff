@@ -36,8 +36,7 @@ RELDIR = release
 
 FILES = mod_utilities mod_settings mod_crop mod_cropseq\
 		mod_datetime mod_weather_station mod_productivity \
-		mod_system mod_io_file mod_cropcoef_v4
-		
+		mod_system mod_io_file mod_et0 mod_cropcoef_v4
 
 #### User, don't touch the following line ####
 

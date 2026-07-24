@@ -125,7 +125,7 @@ program main
     
     ! read co2 values
     CALL read_CO2(sim%CO2_filename,yearList, co2List, errorFlag, verbose )
-        
+
     ! Read landuses
     CALL read_soil_uses(trim(Sim%soiluses_folder)//delimiter//trim(Sim%soiluses_filename),&
                                     aCropSeqList, ErrorFlag, verbose)
@@ -220,8 +220,6 @@ program main
                                         gddDistro, selStart,selEnd, realFormat, ErrorFlag)
             call writeIntResults(trim(adjustl(outPath))//delimiter//'doy.dat',&
                                         doyDistroInt, selStart,selEnd, intFormat, ErrorFlag)
-            call writeIntResults(trim(adjustl(outPath))//delimiter//'cropId.dat',&
-                                        cropIdsInt, selStart,selEnd, intFormat, ErrorFlag)
             call writeRealResults(trim(adjustl(outPath))//delimiter//'Kcb_plain.dat',&
                                         kcbDistro, selStart,selEnd, realFormat, ErrorFlag)
             call writeRealResults(trim(adjustl(outPath))//delimiter//'et0.dat',&
@@ -229,6 +227,8 @@ program main
         end if
         
         ! useful outputs
+        call writeIntResults(trim(adjustl(outPath))//delimiter//'CropId.dat',&
+                                    cropIdsInt, selStart,selEnd, intFormat, ErrorFlag) ! %PS% CropId is now an always-written output (used to be debug only)
         call writeRealResults(trim(adjustl(outPath))//delimiter//'LAI.dat',&
                                     laiDistro, selStart,selEnd, realFormat, ErrorFlag)
         call writeRealResults(trim(adjustl(outPath))//delimiter//'H.dat',&

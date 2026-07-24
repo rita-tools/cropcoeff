@@ -33,6 +33,12 @@ module mod_cropcoef_v4
     use mod_productivity
     
     implicit none
+
+    abstract interface
+        subroutine print_interface(text)
+            character(len=*) :: text
+        end subroutine print_interface
+    end interface
     
     contains
     
@@ -352,11 +358,7 @@ module mod_cropcoef_v4
         real(dp), dimension(:), intent(in) :: GDDList,pValueList
         real(dp), dimension(:), allocatable :: parValues
                 
-        interface
-            subroutine printFun(text)
-                character(len=*):: text
-            end subroutine
-        end interface
+        procedure(print_interface) :: printFun
         
         integer, dimension(:), allocatable :: gddTest,infPoints,idx
         real(dp) :: gdd, pValue, maxGDD
@@ -462,8 +464,8 @@ module mod_cropcoef_v4
         
         integer, intent(out), dimension(:), allocatable :: DoY,cropsOverYear,cropInField
         real(dp), intent(out), dimension(:), allocatable :: T_GDD_corr, lai, hc,kcb,adjKcb, sr, ky, cn, fc, r_stress
-                
-        integer :: nOfDays, i,  c, s, e, timeSpan, harvestGDDIdx
+
+        integer :: nOfDays, i, c, s, e, timeSpan, harvestGDDIdx, bare_soil_start
         integer, dimension(:), allocatable :: sowIndex, maxHarvestIndex
         real(dp) :: minPF, minVF, maxGDD
         real(dp), dimension(:), allocatable :: Tave, DLH,Tmax_sub,Tmin_sub,Tave_sub,DLH_sub
@@ -472,11 +474,7 @@ module mod_cropcoef_v4
         
         real(dp), dimension(:), allocatable :: parGDD, parKcb, parLAI, parHc, parSr, parKy, parCNvalue, parFc, par_r_stress
         
-        interface
-            subroutine printFun(text)
-                character(len=*):: text
-            end subroutine
-        end interface
+        procedure(print_interface) :: printFun
 
 
         nOfDays = size(Tmax, DIM=1)
@@ -560,27 +558,9 @@ module mod_cropcoef_v4
                 if (s>e) exit
                 
                 CALL printFun('Crop sowed at '//trim(intToStr(s)))
-                CALL printFun('Crop harvest at '//trim(intToStr(e)))
-                
                 
                 timeSpan = e-s+1
                 !print*,'timeSpan = ', timeSpan
-                
-                ! set crop
-                !print*,'s = ', s, ' e = ', e
-                cropsOverYear(s:e) = cropList(c)%cropId
-                cropInField(s:e) = 1
-                
-                ! mark previous day to make field free
-                if (cropList(c)%CropsOverlap>0) then
-                    cropInField(s-cropList(c)%CropsOverlap:s-1) = 0
-                end if
-                
-                ! check if there is enough time from the previous crop
-                if ((cropList(c)%CropsOverlap>0).and.(cropList(c)%CropsOverlap<s)) then
-                    ! check id s is one
-                    cropsOverYear(s-cropList(c)%CropsOverlap:s-1) = 0.
-                end if
                 
                 ! make a subset of variable
                 if (ALLOCATED(Tmax_sub) .eqv. .true.) then
@@ -635,33 +615,51 @@ module mod_cropcoef_v4
                     GDD_cum_sub =maxGDD
                 end where
                 
+                ! %PS% find the first day that reaches the max GDD
                 rows =  findloc(GDD_cum_sub, maxGDD)
-                if (size(rows)>0) then
+                harvestGDDIdx = timeSpan
+                if (size(rows)>0 .and. rows(1)>0) then
                     harvestGDDIdx = rows(1)
-                    if (harvestGDDIdx>0) GDD_cum_sub(harvestGDDIdx+1:) = 0. ! after harvest (maxGDD obtained), set GDD to zero
                 end if
+
+                ! %PS% If max GDD is reached before the max harvest date, update "e" accordingly
+                e = s + harvestGDDIdx - 1
+                timeSpan = harvestGDDIdx
+                call printFun('Crop harvested at '//trim(intToStr(e)))
+
+                ! %PS% Enforce a CropsOverlap-days-long bare-soil interval before sowing.
+                bare_soil_start = s
+                if (cropList(c)%CropsOverlap > 0) then
+                    bare_soil_start = max(1, s-cropList(c)%CropsOverlap)
+                end if
+                call warnCropTruncation(cropInField, cropsOverYear, bare_soil_start, &
+                                           s, e, cropList, cropList(c), printFun)
+                if (cropList(c)%CropsOverlap > 0) then
+                    if (bare_soil_start <= s-1) then
+                        cropInField(bare_soil_start:s-1) = 0
+                        cropsOverYear(bare_soil_start:s-1) = 0
+                    end if
+                end if
+
+                cropsOverYear(s:e) = cropList(c)%cropId
+                cropInField(s:e) = 1
                                 
                 CALL printFun('Max cum GDD after harvest '//trim(realToStr(maxval(GDD_cum_sub))))
                                 
-                T_GDD_corr(s:e)=GDD_cum_sub
+                T_GDD_corr(s:e)=GDD_cum_sub(1:timeSpan) !%PS%: now that "e" might have changed, variable assignments need to pass only (1:timeSpan) slices
                 
                 ! assign pars lai, hc,kcb, sr, cn
                 ! TODO: ADD KY
                 call printFun('*** Assign LAI ***')
-                lai(s:e) = computeParamsDistro_v4(GDD_cum_sub, parGDD, parLAI,printFun)
+                lai(s:e) = computeParamsDistro_v4(GDD_cum_sub(1:timeSpan), parGDD, parLAI,printFun)
                 lai(s:e) = fillMissingL(lai(s:e))
-                if ((s-1)>0) lai(s-1) = minval(parLAI)
-                if ((e+1)<nOfDays) lai(e+1) = minval(parLAI)
                 !print*, 'min lai after compute: ', minval(lai)
                 
                 call printFun('*** Assign Hc ***')
-                hc(s:e) = computeParamsDistro_v4(GDD_cum_sub, parGDD, parHc,printFun)
-                
-                if ((s-1)>0) hc(s-1) = minval(parHc)
-                if ((e+1)<nOfDays) hc(e+1) = minval(parHc)
+                hc(s:e) = computeParamsDistro_v4(GDD_cum_sub(1:timeSpan), parGDD, parHc,printFun)
                 
                 call printFun('*** Assign Kcb ***')
-                kcb(s:e) = computeParamsDistro_v4(GDD_cum_sub, parGDD, parKcb,printFun)
+                kcb(s:e) = computeParamsDistro_v4(GDD_cum_sub(1:timeSpan), parGDD, parKcb,printFun)
                 
                 call printFun('*** Assign Adjusted Kcb ***')
                 if (cropList(c)%adj_flag .eqv. .true.) then
@@ -674,41 +672,26 @@ module mod_cropcoef_v4
                 adjKcb(s:e) = fillMissingL(adjKcb(s:e))
                 hc(s:e) = fillMissingL(hc(s:e))
                 
-                if ((s-1)>0) kcb(s-1) = minval(parKcb)
-                if ((e+1)<nOfDays) kcb(e+1) = minval(parKcb)
-                if ((s-1)>0) adjKcb(s-1) = minval(parKcb)
-                if ((e+1)<nOfDays) adjKcb(e+1) = minval(parKcb)
-                
                 
                 call printFun('*** Assign Sr ***')
-                sr(s:e) = computeParamsDistro_v4(GDD_cum_sub, parGDD, parSr,printFun)
+                sr(s:e) = computeParamsDistro_v4(GDD_cum_sub(1:timeSpan), parGDD, parSr,printFun)
                 sr(s:e) = fillMissingL(sr(s:e))
-                if ((s-1)>0) sr(s-1) = minval(parSr)
-                if ((e+1)<nOfDays) sr(e+1) = minval(parSr)
                 
                 call printFun('*** Assign Ky ***')
-                ky(s:e) = computeParamsDistro_v4(GDD_cum_sub, parGDD, parKy,printFun)
+                ky(s:e) = computeParamsDistro_v4(GDD_cum_sub(1:timeSpan), parGDD, parKy,printFun)
                 ky(s:e) = fillMissingL(ky(s:e))
-                if ((s-1)>0) ky(s-1) = minval(parKy)
-                if ((e+1)<nOfDays) ky(e+1) = minval(parKy)
                 
                 call printFun('*** Assign CN ***')
-                cn(s:e) = computeParamsDistro_v4(GDD_cum_sub, parGDD, parCNvalue,printFun)
+                cn(s:e) = computeParamsDistro_v4(GDD_cum_sub(1:timeSpan), parGDD, parCNvalue,printFun)
                 cn(s:e) = fillMissingK(cn(s:e))
-                if ((s-1)>0) cn(s-1) = minval(parCNvalue)
-                if ((e+1)<nOfDays) cn(e+1) = minval(parCNvalue)
 
                 call printFun('*** Assign fc ***')
-                fc(s:e) = computeParamsDistro_v4(GDD_cum_sub, parGDD, parFc,printFun)
+                fc(s:e) = computeParamsDistro_v4(GDD_cum_sub(1:timeSpan), parGDD, parFc,printFun)
                 fc(s:e) = fillMissingL(fc(s:e))
-                if ((s-1)>0) fc(s-1) = minval(parFc)
-                if ((e+1)<nOfDays) fc(e+1) = minval(parFc)
                 
                 call printFun('*** Assign r_stress ***')
-                r_stress(s:e) = computeParamsDistro_v4(GDD_cum_sub, parGDD, par_r_stress,printFun)
+                r_stress(s:e) = computeParamsDistro_v4(GDD_cum_sub(1:timeSpan), parGDD, par_r_stress,printFun)
                 r_stress(s:e) = fillMissingL(r_stress(s:e))
-                if ((s-1)>0) r_stress(s-1) = minval(par_r_stress)
-                if ((e+1)<nOfDays) r_stress(e+1) = minval(par_r_stress)
                 
 
             end do
@@ -747,11 +730,7 @@ module mod_cropcoef_v4
         character(len=55) :: int_to_char
         
         
-        interface
-            subroutine printFun(text)
-                character(len=*) :: text
-            end subroutine
-        end interface
+        procedure(print_interface) :: printFun
 
         debug = .false.
         
@@ -948,6 +927,77 @@ module mod_cropcoef_v4
 
     end subroutine
 
+    ! Warns the user when a crop is skipped or harvested early to allow the next sowing (considering CropsOverlap)
+    subroutine warnCropTruncation(cropInField, cropsOverYear, overwriteStart,         &
+                                & sowingDay, overwriteEnd, cropList, new_crop, printFun)
+        integer, dimension(:), intent(in) :: cropInField, cropsOverYear
+        integer, intent(in) :: overwriteStart, sowingDay, overwriteEnd
+        type(Crop), dimension(:), intent(in) :: cropList
+        type(Crop), intent(in) :: new_crop
+        type(Crop) :: previous_crop
+        integer :: i, j, segmentStart, segmentEnd, previousCropId, daysCut
+        character(len=4*maxlength) :: msg, details
+
+        procedure(print_interface) :: printFun
+
+        i = max(1,overwriteStart)
+        do while (i<=min(overwriteEnd,size(cropInField)))
+            if (cropInField(i)==0 .and. cropsOverYear(i)==0) then
+                i = i + 1
+                cycle
+            end if
+
+            previousCropId = cropsOverYear(i)
+            segmentStart = i
+            do while (i<=min(overwriteEnd,size(cropInField)))
+                if (cropInField(i)==0 .and. cropsOverYear(i)==0) exit
+                if (cropsOverYear(i)/=previousCropId) exit
+                i = i + 1
+            end do
+            segmentEnd = i - 1
+            daysCut = segmentEnd - segmentStart + 1
+
+            previous_crop%cropName = 'unknown crop'
+            do j=1,size(cropList)
+                if (cropList(j)%cropId==previousCropId) then
+                    previous_crop = cropList(j)
+                    exit
+                end if
+            end do
+
+            if (sowingDay < segmentStart) then
+                msg = 'WARNING: '//trim(previous_crop%cropName)//' was not sown to make space for '//trim(new_crop%cropName)
+                details = 'scheduled days '//trim(adjustl(intToStr(segmentStart)))//' to '// &
+                          trim(adjustl(intToStr(segmentEnd)))//' were overwritten by the new crop sown on day '// &
+                          trim(adjustl(intToStr(sowingDay)))
+            else
+                msg = 'WARNING: '//trim(previous_crop%cropName)//' was harvested early to make space for '//trim(new_crop%cropName)
+                if (daysCut==1) then
+                    details = '1 day cut: '
+                else
+                    details = trim(adjustl(intToStr(daysCut)))//' days cut: '
+                end if
+                if (segmentEnd < sowingDay) then
+                    details = trim(details)//' days '//trim(adjustl(intToStr(segmentStart)))//' to '// &
+                              trim(adjustl(intToStr(segmentEnd)))//' become bare soil before sowing'
+                else if (segmentStart >= sowingDay) then
+                    details = trim(details)//' days '//trim(adjustl(intToStr(segmentStart)))//' to '// &
+                              trim(adjustl(intToStr(segmentEnd)))//' are overwritten from sowing day '// &
+                              trim(adjustl(intToStr(sowingDay)))
+                else
+                    details = trim(details)//' days '//trim(adjustl(intToStr(segmentStart)))// &
+                              ' to '//trim(adjustl(intToStr(sowingDay-1)))//' become bare soil, and days '// &
+                              trim(adjustl(intToStr(sowingDay)))//' to '//trim(adjustl(intToStr(segmentEnd)))// &
+                              ' are overwritten by the new crop'
+                end if
+            end if
+
+            call printFun(trim(msg))
+            call printFun('  '//trim(details))
+            print *, trim(msg)
+            print *, '  '//trim(details)
+        end do
+    end subroutine warnCropTruncation
     
 end module
 

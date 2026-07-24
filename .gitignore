@@ -3,3 +3,6 @@
 obj/
 .gitignore
 assets/
+/.codex_tmp
+release/git.log
+*.zip
