@@ -973,7 +973,7 @@ module mod_cropcoef_v4
             segmentEnd = i - 1
             cropsOverYear(segmentStart:segmentEnd) = 0
 
-            if (sowingDay < segmentStart) then
+            if (sowingDay <= segmentStart) then
                 warningKind = warning_not_sown ! newCrop started before previousCrop's sowing --> We overwrote that sowing and hence the entire crop for consistency
             else
                 warningKind = warning_early_harvest ! newCrop started midway through previousCrop --> We overwrote the remaining part (i.e. early harvest for that crop)
