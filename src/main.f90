@@ -30,6 +30,8 @@ program main
     USE mod_utilities
     USE mod_et0
     use mod_system
+    use mod_truncation_warnings, only: resetCropTruncationWarnings, &
+                                            printCropTruncationWarningSummary
 
     implicit none
     
@@ -125,7 +127,7 @@ program main
     
     ! read co2 values
     CALL read_CO2(sim%CO2_filename,yearList, co2List, errorFlag, verbose )
-        
+
     ! Read landuses
     CALL read_soil_uses(trim(Sim%soiluses_folder)//delimiter//trim(Sim%soiluses_filename),&
                                     aCropSeqList, ErrorFlag, verbose)
@@ -147,6 +149,16 @@ program main
             if (verbose .eqv. .true.) CALL print_crop_par(aCropSeqList(i)%cropList(j))
             
             end do
+
+        ! %PS% zero-GDD land uses are treated as baresoil
+        do j=1,size(aCropSeqList(i)%cropList)
+            if (maxval(aCropSeqList(i)%cropList(j)%GDD) <= 0.0_dp) then
+                print *, "Crop "//trim(aCropSeqList(i)%cropList(j)%cropName)//" in land-use "// &
+                    trim(adjustl(intToStr(aCropSeqList(i)%cropSeqId)))// &
+                    " has maxGDD <= 0 and will hence be treated as baresoil."
+                exit
+            end if
+        end do
     end do
     
     ! save canopy resistance
@@ -161,6 +173,7 @@ program main
     
     nOfWS = size(aWsList,dim=1)
 
+    call resetCropTruncationWarnings(verbose)
         
     ! start loop to run crop coef for each station
     do i=1,nOfWS
@@ -220,8 +233,6 @@ program main
                                         gddDistro, selStart,selEnd, realFormat, ErrorFlag)
             call writeIntResults(trim(adjustl(outPath))//delimiter//'doy.dat',&
                                         doyDistroInt, selStart,selEnd, intFormat, ErrorFlag)
-            call writeIntResults(trim(adjustl(outPath))//delimiter//'cropId.dat',&
-                                        cropIdsInt, selStart,selEnd, intFormat, ErrorFlag)
             call writeRealResults(trim(adjustl(outPath))//delimiter//'Kcb_plain.dat',&
                                         kcbDistro, selStart,selEnd, realFormat, ErrorFlag)
             call writeRealResults(trim(adjustl(outPath))//delimiter//'et0.dat',&
@@ -229,6 +240,8 @@ program main
         end if
         
         ! useful outputs
+        call writeIntResults(trim(adjustl(outPath))//delimiter//'CropId.dat',&
+                                    cropIdsInt, selStart,selEnd, intFormat, ErrorFlag) ! %PS% CropId is now an always-written output (used to be debug only)
         call writeRealResults(trim(adjustl(outPath))//delimiter//'LAI.dat',&
                                     laiDistro, selStart,selEnd, realFormat, ErrorFlag)
         call writeRealResults(trim(adjustl(outPath))//delimiter//'H.dat',&
@@ -276,6 +289,7 @@ program main
                                     
     end do
 
+    call printCropTruncationWarningSummary()
     
 end program
 

@@ -32,9 +32,8 @@ module mod_io_file
     use mod_productivity
     use mod_system
     implicit none
-    
+
     integer::log_unit = -1
-    
 
     contains
     
@@ -145,7 +144,7 @@ module mod_io_file
         integer, intent(out) :: ErrorFlag
         logical, optional, intent(in) :: Debug
 
-        integer :: i, j, l
+        integer :: i
         integer :: ios, free_unit, checkstat, eof
         type(Crop):: crop1,crop2
         
@@ -227,7 +226,7 @@ module mod_io_file
         end do
         
         close(free_unit)
-        
+
     end subroutine read_soil_uses
     
     ! read_crop parameters file 
@@ -264,10 +263,11 @@ module mod_io_file
             call printMessage(errorFlag,"mod_io_file","read_crop_par","Error opening file",&
                     & parFilePath)
         end if
-        
-        p = scan(parFilePath, '/',.true.)
-        aCrop%cropName = parFilePath(p+1:)
-        p = scan(aCrop%cropName, '.',.true.)
+
+        p = max(scan(trim(parFilePath), '/', back=.true.), &
+                scan(trim(parFilePath), achar(92), back=.true.)) ! %PS%: now correctly parse both unix and windows-style separators (achar(92) is safer than '\')
+        aCrop%cropName = parFilePath(p+1:len_trim(parFilePath))
+        p = scan(trim(aCrop%cropName), '.', back=.true.)
         aCrop%cropName = aCrop%cropName(1:p-1)
         aCrop%fileName = parFilePath
         
@@ -405,7 +405,7 @@ module mod_io_file
                         CASE('')
                             write (buffer, "(I2)") line
                         CASE DEFAULT
-                            CALL printMessage(2,"mod_io_file","read_crop_par","Unrecognized variable:",label)
+                            CALL printMessage(2,"mod_io_file","read_crop_par","Unrecognized variable in file "//parFilePath//":",label)
                     end select
                 elseif (ncols == 5) then
                     !print *,'read row 5',trim(label)

@@ -222,11 +222,7 @@ subroutine computeCropSeq_v5(wsLat, startDay, Tmax, Tmin, movMeanNum, &
         integer, dimension(:), allocatable ::  rows
         logical :: changeCrop
         
-        interface
-            subroutine printFun(text)
-                character(len=*):: text
-            end subroutine
-        end interface
+        procedure(print_interface) :: printFun
 
 
         nOfDays = size(Tmax, DIM=1)

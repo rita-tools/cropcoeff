@@ -27,9 +27,9 @@ module mod_crop
     implicit none
     
     type Crop
-        character(LEN=maxlength) :: cropName ! Crop denomination
+        character(LEN=maxlength) :: cropName = 'uninitialized crop' ! Crop denomination
         character(LEN=maxlength) :: fileName ! Name of the data-base file that contains crop characteristics
-        integer :: cropId = -1 ! unique id identification
+        integer :: cropId = -1 ! position of the crop in its land-use rotation
         integer :: SowingDate_min ! minimum sowing date (1-366)
         integer :: SowingDelay_max ! maximum number of days allowed for sowing after SowingDate_min (1-366)
         integer :: HarvestDate_max ! maximum harvest date (1-366)
