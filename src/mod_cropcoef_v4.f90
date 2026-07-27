@@ -622,27 +622,28 @@ module mod_cropcoef_v4
                     GDD_cum_sub =maxGDD
                 end where
                 
-                ! %PS% find the first day that reaches the max GDD
+                ! %PS%: find the first day that reaches the max GDD
                 rows =  findloc(GDD_cum_sub, maxGDD)
                 harvestGDDIdx = timeSpan
                 if (size(rows)>0 .and. rows(1)>0) then
                     harvestGDDIdx = rows(1)
                 end if
 
-                ! %PS% If max GDD is reached before the max harvest date, update "e" accordingly
+                ! %PS%: If max GDD is reached before the max harvest date, update "e" accordingly
                 e = s + harvestGDDIdx - 1
                 timeSpan = harvestGDDIdx
                 call printFun('Crop harvested at '//trim(intToStr(e)))
 
-                ! %PS% Enforce a CropsOverlap-days-long bare-soil interval before sowing.
+                ! %PS%: Enforce a CropsOverlap-days-long bare-soil interval before sowing.
                 bare_soil_start = s
                 if (cropList(c)%CropsOverlap > 0) then
                     bare_soil_start = max(1, s-cropList(c)%CropsOverlap)
                 end if
+
+                ! %PS%: Placing this crop might overwrite part of an already placed crop. Do it reasonably and store diagnostics about it.
                 sowingDate = addDays(startDay,s-1)
-                call truncateOverlappingCrops(cropInField, cropsOverYear, bare_soil_start, &
-                                           s, e, cropList, cropList(c), landUseId, &
-                                           weatherStationId, sowingDate%year, printFun)
+                call truncateOverlappingCrops(cropInField, cropsOverYear, bare_soil_start, s, e, cropList,       &
+                                            & cropList(c), landUseId, weatherStationId, sowingDate%year, printFun)
                 if (cropList(c)%CropsOverlap > 0) then
                     if (bare_soil_start <= s-1) then
                         cropInField(bare_soil_start:s-1) = 0
@@ -937,10 +938,9 @@ module mod_cropcoef_v4
 
     end subroutine
 
-    ! %PS% Remove complete crop tails affected by a later crop and warn the user.
-    subroutine truncateOverlappingCrops(cropInField, cropsOverYear, overwriteStart,   &
-                                      & sowingDay, overwriteEnd, cropList, new_crop,   &
-                                      & landUseId, weatherStationId, calendarYear, printFun)
+    ! %PS%: Remove complete crop tails affected by a later crop and warn the user.
+    subroutine truncateOverlappingCrops(cropInField, cropsOverYear, overwriteStart, sowingDay, overwriteEnd, cropList, &
+                                      & new_crop, landUseId, weatherStationId, calendarYear, printFun                  )
         integer, dimension(:), intent(inout) :: cropInField, cropsOverYear
         integer, intent(in) :: overwriteStart, sowingDay, overwriteEnd
         integer, intent(in) :: landUseId, weatherStationId, calendarYear
@@ -951,9 +951,9 @@ module mod_cropcoef_v4
 
         procedure(print_interface) :: printFun
 
-        i = max(1,overwriteStart)
-        do while (i<=min(overwriteEnd,size(cropInField)))
-            if (cropInField(i)==0 .and. cropsOverYear(i)==0) then
+        i = overwriteStart
+        do while (i <= min(overwriteEnd, size(cropInField)))
+            if (cropInField(i) == 0 .and. cropsOverYear(i) == 0) then
                 i = i + 1
                 cycle
             end if
@@ -961,17 +961,15 @@ module mod_cropcoef_v4
             previousCropId = cropsOverYear(i)
             segmentStart = i
 
-            ! When crop 2 is sown before the end of crop 1, make sure that crop 1 doesn't resume after crop 2 ends (it can reappear only if sown again)
             do while (i<=size(cropInField))
-                if (cropInField(i)==0 .and. cropsOverYear(i)==0) exit
-                if (cropsOverYear(i)/=previousCropId) exit
+                if (cropInField(i) == 0 .and. cropsOverYear(i) == 0) exit
+                if (cropsOverYear(i) /= previousCropId) exit
                 i = i + 1
             end do
             segmentEnd = i - 1
 
-            previous_crop%cropName = 'unknown crop'
-            do j=1,size(cropList)
-                if (cropList(j)%cropId==previousCropId) then
+            do j=1, size(cropList)
+                if (cropList(j)%cropId == previousCropId) then
                     previous_crop = cropList(j)
                     exit
                 end if
@@ -983,9 +981,10 @@ module mod_cropcoef_v4
                 warningKind = warning_early_harvest
             end if
 
-            call recordCropTruncationWarning(landUseId, previousCropId, new_crop%cropId, warningKind, &
-                                             previous_crop%cropName, new_crop%cropName, segmentStart,  &
-                                             segmentEnd, sowingDay, weatherStationId, calendarYear, printFun)
+            ! Store diagnostics (aggregate warnings are printed once at the end of the run)
+            call recordCropTruncationWarning(landUseId, previousCropId, new_crop%cropId, warningKind,       &
+                                           & previous_crop%cropName, new_crop%cropName, segmentStart,       &
+                                           & segmentEnd, sowingDay, weatherStationId, calendarYear, printFun)
 
             cropInField(segmentStart:segmentEnd) = 0
             cropsOverYear(segmentStart:segmentEnd) = 0

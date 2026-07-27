@@ -44,10 +44,8 @@ module mod_truncation_warnings
         print_detailed_warnings = printDetails
     end subroutine resetCropTruncationWarnings
 
-    subroutine recordCropTruncationWarning(landUseId, previousCropId, newCropId, warningKind, &
-                                          & previousCropName, newCropName, segmentStart,       &
-                                          & segmentEnd, sowingDay, weatherStationId,           &
-                                          & calendarYear, printFun)
+    subroutine recordCropTruncationWarning(landUseId, previousCropId, newCropId, warningKind, previousCropName, newCropName, &
+                                         & segmentStart, segmentEnd, sowingDay, weatherStationId, calendarYear, printFun     )
         integer, intent(in) :: landUseId, previousCropId, newCropId, warningKind
         integer, intent(in) :: segmentStart, segmentEnd, sowingDay
         integer, intent(in) :: weatherStationId, calendarYear
@@ -79,7 +77,7 @@ module mod_truncation_warnings
         call addToSummary(landUseId, previousCropId, newCropId, warningKind, previousCropName, &
                           newCropName, daysRemoved, weatherStationId, calendarYear)
 
-        ! %PS% Detailed occurrences remain available in debug logs and with -verbose.
+        ! %PS% Detailed occurrences are printed in debug logs and with -verbose.
         call printFun(trim(msg))
         call printFun('  '//trim(details))
         if (print_detailed_warnings) then
@@ -102,8 +100,7 @@ module mod_truncation_warnings
         end do
         do i=1,size(summaryOrder)-1
             do j=1,size(summaryOrder)-i
-                if (summaryComesAfter(warning_summaries(summaryOrder(j)), &
-                                      warning_summaries(summaryOrder(j+1)))) then
+                if (summaryComesAfter(warning_summaries(summaryOrder(j)), warning_summaries(summaryOrder(j+1)))) then
                     tempIndex = summaryOrder(j)
                     summaryOrder(j) = summaryOrder(j+1)
                     summaryOrder(j+1) = tempIndex

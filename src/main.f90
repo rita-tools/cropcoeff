@@ -150,7 +150,7 @@ program main
             
             end do
 
-        ! %PS% Report zero-GDD land uses once, before processing weather stations.
+        ! %PS% zero-GDD land uses are treated as baresoil
         do j=1,size(aCropSeqList(i)%cropList)
             if (maxval(aCropSeqList(i)%cropList(j)%GDD) <= 0.0_dp) then
                 print *, "Crop "//trim(aCropSeqList(i)%cropList(j)%cropName)//" in land-use "// &
@@ -173,7 +173,7 @@ program main
     
     nOfWS = size(aWsList,dim=1)
 
-    call resetCropTruncationWarnings(verbose) ! %PS%
+    call resetCropTruncationWarnings(verbose)
         
     ! start loop to run crop coef for each station
     do i=1,nOfWS
@@ -289,7 +289,7 @@ program main
                                     
     end do
 
-    call printCropTruncationWarningSummary() ! %PS%
+    call printCropTruncationWarningSummary()
     
 end program
 
