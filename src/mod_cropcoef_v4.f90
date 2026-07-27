@@ -642,8 +642,9 @@ module mod_cropcoef_v4
 
                 ! %PS%: Placing this crop might overwrite part of an already placed crop. Do it reasonably and store diagnostics about it.
                 sowingDate = addDays(startDay,s-1)
-                call truncateOverlappingCrops(cropInField, cropsOverYear, bare_soil_start, s, e, cropList,       &
+                call truncateOverlappingCrops(cropsOverYear, bare_soil_start, s, e, cropList,       &
                                             & cropList(c), landUseId, weatherStationId, sowingDate%year, printFun)
+                cropInField = merge(1, 0, cropsOverYear /= 0)
                 if (cropList(c)%CropsOverlap > 0) then
                     if (bare_soil_start <= s-1) then
                         cropInField(bare_soil_start:s-1) = 0
@@ -939,55 +940,50 @@ module mod_cropcoef_v4
     end subroutine
 
     ! %PS%: Remove complete crop tails affected by a later crop and warn the user.
-    subroutine truncateOverlappingCrops(cropInField, cropsOverYear, overwriteStart, sowingDay, overwriteEnd, cropList, &
-                                      & new_crop, landUseId, weatherStationId, calendarYear, printFun                  )
-        integer, dimension(:), intent(inout) :: cropInField, cropsOverYear
+    subroutine truncateOverlappingCrops(cropsOverYear, overwriteStart, sowingDay, overwriteEnd, cropList, &
+                                      & newCrop, landUseId, weatherStationId, calendarYear, printFun      )
+        integer, dimension(:), intent(inout) :: cropsOverYear
         integer, intent(in) :: overwriteStart, sowingDay, overwriteEnd
         integer, intent(in) :: landUseId, weatherStationId, calendarYear
         type(Crop), dimension(:), intent(in) :: cropList
-        type(Crop), intent(in) :: new_crop
-        type(Crop) :: previous_crop
-        integer :: i, j, segmentStart, segmentEnd, previousCropId, warningKind
-
+        type(Crop), intent(in) :: newCrop
+        type(Crop) :: previousCrop
+        integer :: i, segmentStart, segmentEnd, previousCropSlot, warningKind
         procedure(print_interface) :: printFun
 
         i = overwriteStart
-        do while (i <= min(overwriteEnd, size(cropInField)))
-            if (cropInField(i) == 0 .and. cropsOverYear(i) == 0) then
+        do while (i <= overwriteEnd)
+
+            ! Skip any leading baresoil period
+            if (cropsOverYear(i) == 0) then
                 i = i + 1
                 cycle
             end if
 
-            previousCropId = cropsOverYear(i)
+            ! We enter a period where newCrop overlaps previousCrop; continue counting until previousCrop finishes
+            previousCropSlot = cropsOverYear(i)
+            previousCrop = cropList(previousCropSlot)
             segmentStart = i
-
-            do while (i<=size(cropInField))
-                if (cropInField(i) == 0 .and. cropsOverYear(i) == 0) exit
-                if (cropsOverYear(i) /= previousCropId) exit
+            do while (i <= size(cropsOverYear))
+                if (cropsOverYear(i) /= previousCropSlot) exit
                 i = i + 1
             end do
-            segmentEnd = i - 1
 
-            do j=1, size(cropList)
-                if (cropList(j)%cropId == previousCropId) then
-                    previous_crop = cropList(j)
-                    exit
-                end if
-            end do
+            ! Overwrite the period to baresoil (will be changed to newCrop, entirely or partially, in computeCropSeq)
+            segmentEnd = i - 1
+            cropsOverYear(segmentStart:segmentEnd) = 0
 
             if (sowingDay < segmentStart) then
-                warningKind = warning_not_sown
+                warningKind = warning_not_sown ! newCrop started before previousCrop's sowing --> We overwrote that sowing and hence the entire crop for consistency
             else
-                warningKind = warning_early_harvest
+                warningKind = warning_early_harvest ! newCrop started midway through previousCrop --> We overwrote the remaining part (i.e. early harvest for that crop)
             end if
 
             ! Store diagnostics (aggregate warnings are printed once at the end of the run)
-            call recordCropTruncationWarning(landUseId, previousCropId, new_crop%cropId, warningKind,       &
-                                           & previous_crop%cropName, new_crop%cropName, segmentStart,       &
+            call recordCropTruncationWarning(landUseId, previousCropSlot, newCrop%cropId, warningKind,       &
+                                           & previousCrop%cropName, newCrop%cropName, segmentStart,          &
                                            & segmentEnd, sowingDay, weatherStationId, calendarYear, printFun)
 
-            cropInField(segmentStart:segmentEnd) = 0
-            cropsOverYear(segmentStart:segmentEnd) = 0
         end do
     end subroutine truncateOverlappingCrops
     

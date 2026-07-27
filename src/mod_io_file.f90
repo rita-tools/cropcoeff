@@ -265,7 +265,7 @@ module mod_io_file
         end if
 
         p = max(scan(trim(parFilePath), '/', back=.true.), &
-                scan(trim(parFilePath), achar(92), back=.true.)) ! %PS% now correctly parse both unix and windows-style separators (achar(92) is safer than '\')
+                scan(trim(parFilePath), achar(92), back=.true.)) ! %PS%: now correctly parse both unix and windows-style separators (achar(92) is safer than '\')
         aCrop%cropName = parFilePath(p+1:len_trim(parFilePath))
         p = scan(trim(aCrop%cropName), '.', back=.true.)
         aCrop%cropName = aCrop%cropName(1:p-1)
