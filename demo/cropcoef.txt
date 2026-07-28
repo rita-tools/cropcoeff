@@ -1,0 +1,21 @@
+##### CropCoef v1.0.0 demo settings #####
+
+# Inputs
+WeathStatFilename = weather_stations.dat
+MeteoDataFolder = meteodata
+CropInputsFolder = landuses
+SoilUsesFilename = soil_uses.txt
+CropFolder = landuses/crop_parameters
+
+# Outputs
+OutputFolder = pheno
+PhenoRoot = pheno_
+
+# Simulation options
+CanopyResMod = 1
+CheckFutureTemp = 1
+Tollerance = 0.9
+VFactor = 0.2
+Debug = 0
+Window = 366
+MovMeanNum = 2
