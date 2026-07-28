@@ -1,0 +1,49 @@
+name: Build CropCoef release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Build
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path release, obj | Out-Null
+          make
+
+      - name: Package release
+        shell: pwsh
+        run: |
+          $package = "release/CropCoef_${{ github.ref_name }}"
+
+          New-Item -ItemType Directory -Force -Path $package | Out-Null
+
+          Copy-Item release/*.exe $package/
+          Copy-Item demo $package/demo -Recurse
+
+          Compress-Archive `
+            -Path "$package/*" `
+            -DestinationPath "$package.zip"
+
+      - name: Create GitHub release
+        shell: pwsh
+        run: |
+          $version = $env:GITHUB_REF_NAME.TrimStart('v')
+
+          gh release create $env:GITHUB_REF_NAME `
+            release/*.exe `
+            release/*.zip `
+            --title "CropCoef $version" `
+            --generate-notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

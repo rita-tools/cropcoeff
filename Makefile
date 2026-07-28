@@ -1,5 +1,6 @@
 # commit code/number for versioning
 COMMIT := $(shell git rev-parse --short HEAD)
+VERSION := $(firstword $(shell git tag --points-at HEAD))
 CURRENTDATE := $(shell date --iso=seconds)
 LOG_FILE := $(shell git log --format=reference > ./release/git.log)
 
@@ -25,7 +26,7 @@ GFFLAGS = -cpp -DGIT_VERSION=\"$(COMMIT)\" -DCOMP_DATE=\"$(CURRENTDATE)\" -DWIN=
 #GFFLAGS = -cpp -DGIT_VERSION=\"$(COMMIT)\" -DCOMP_DATE=\"$(CURRENTDATE)\" -DWIN=$(WIN) -ffast-math  -O3 -ffree-line-length-512 -c
 LDFLAGS = 
 
-APPNAME = cropcoef
+APPNAME = cropcoef$(if $(VERSION),_$(VERSION))
 EXT = .f90
 SRCDIR = src
 OBJDIR = obj
