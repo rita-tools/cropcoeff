@@ -55,9 +55,8 @@ program main
     real(dp),dimension(:),allocatable :: co2List,canResList
     real(dp),dimension(:,:),allocatable :: adjWP
         
-    CHARACTER(len=maxlength) :: arg, settingsFileName, outPath
-    character(len=55) :: int_to_char
-    integer :: i, j, r, c, nOfCropSeq, window, nOfWS
+    character(len=maxlength) :: arg, settingsFileName, outPath, stationFileStem
+    integer :: i, j, r, c, nOfCropSeq, window, nOfWS, extensionPos
     Integer :: selStart, selEnd
     logical :: dir_exists
         
@@ -178,6 +177,13 @@ program main
     ! start loop to run crop coef for each station
     do i=1,nOfWS
         print*, 'processing ', trim(adjustl(aWsList(i)%fileName))
+
+        !%PS%: changed output folder names to use names specified in weather_stations.dat, not ID, because
+        !      this is what IdrAgra expects. Old behaviour is kept if station names are in the "ID.dat" format.
+        stationFileStem = trim(adjustl(aWsList(i)%fileName))
+        extensionPos = index(trim(stationFileStem), '.')
+        if (extensionPos > 1) stationFileStem = stationFileStem(:extensionPos-1)
+
         aWsList(i)%fileName=trim(Sim%meteo_path)//delimiter//trim(aWsList(i)%fileName)
         ! read weather station
         call read_meteo_data(aWsList(i), errorFlag, verbose)
@@ -185,9 +191,7 @@ program main
         if (verbose .eqv. .true.) CALL print_meteo_data(aWsList(i))
     
         ! Make outdir if doesn't exist
-        write(int_to_char,*) aWsList(i)%wsId
-        
-        outPath = trim(Sim%pheno_outpath)//delimiter//trim(Sim%pheno_root)//trim(adjustl(int_to_char))
+        outPath = trim(Sim%pheno_outpath)//delimiter//trim(Sim%pheno_root)//trim(stationFileStem)
         
         ! check if the dir exists or make a new dir
         inquire(file=trim(outPath), exist=dir_exists)   ! dir_exists will be TRUE if the directory exists

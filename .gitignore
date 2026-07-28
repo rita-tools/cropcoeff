@@ -1,8 +1,7 @@
 /example/pheno/
 /example/
 obj/
-.gitignore
 assets/
 /.codex_tmp
-release/git.log
+release/
 *.zip
