@@ -130,6 +130,7 @@ program main
     ! Read landuses
     CALL read_soil_uses(trim(Sim%soiluses_folder)//delimiter//trim(Sim%soiluses_filename),&
                                     aCropSeqList, ErrorFlag, verbose)
+    if (ErrorFlag /= 0) stop 'Terminating...'
     
     nOfCropSeq = size(aCropSeqList)
     

@@ -153,11 +153,12 @@ module mod_io_file
         integer :: ncols
         integer :: line
         integer :: p
-        Integer::landUseId
+        Integer :: landUseId, expectedLandUseId
         character(len=maxlength):: firstCropFN, secondCropFN
         
         ncols = -1
         line = 0
+        expectedLandUseId = 1
         ErrorFlag = 0 ! 0 if no error occours
         
         call SeekUN( ErrorFlag, free_unit) !Look for a free unit
@@ -204,6 +205,17 @@ module mod_io_file
                     !print *,'read row 3xcol: ',trim(label)
                     buffer = trim(replaceText(label,'*','NaN'))
                     read(buffer,*,iostat=ios) landUseId, firstCropFN, secondCropFN
+
+                    !%PS%: Require that IDs are ordinal integers starting from 1 (IdrAgra expects this)
+                    if (landUseId /= expectedLandUseId) then
+                        ErrorFlag = 1
+                        CALL printMessage(0,"mod_io_file","read_soil_uses", &
+                                          "Cr_ID values must be ordinal integers starting from 1.", &
+                                          "At line "//trim(intToStr(line))//" expected Cr_ID "// &
+                                          trim(intToStr(expectedLandUseId))//" but found "//trim(intToStr(landUseId)))
+                        return
+                    end if
+
                     ! populate sequence
                     
                     aCropSeq%cropSeqId = landUseId
@@ -218,6 +230,7 @@ module mod_io_file
                         !print*,'OK add crop 2'
                     end if
                     i = addCropSeq(aCropSeqList, aCropSeq)
+                    expectedLandUseId = expectedLandUseId + 1
                     !print*,'OK add crop sequence'
                     CALL clearCropList(aCropSeq)
                     !print*, 'i =',i, size(aCropSeqList)
