@@ -319,11 +319,11 @@ module mod_cropcoef_v4
         real(dp), intent(in) :: RHmin(:)
         real(dp), intent(in) :: Wind(:)
         real(dp), intent(in) :: hc(:)
-        real(dp), allocatable :: adjKcb(:)
+        real(dp), allocatable :: adjKcb(:), hcDaily(:)
         real(dp), allocatable :: r(:)
         real(dp) :: CF, d
         
-        integer :: i,s,e,n
+        integer :: i,j,s,e,n
         n = size(Kcb)
         
         Allocate(adjKcb(n), r(n))
@@ -331,25 +331,39 @@ module mod_cropcoef_v4
         adjKcb = Kcb
         r = 0
         r = pack([(i,i=1,n)],Kcb/=nodatar,[(0,i=1,n)])
-        
+        hcDaily = fillMissingL(hc)
         !~ print*, 'len(r) = ', size(r), ' n = ', n
         !~ print*, 'i    s    e'
-        do i =1, size(r)-1
+        i = 1
+        do while (i < size(r))
             s = r(i)
             e = r(i+1)
             !e = e+1
             !~ print*,i,s,e
             if ((s == 0) .or. (e == 0)) exit
-            
+            j = i+1
             if ((Kcb(e)>0.45).and.(Kcb(s)>0.45)) then
                 ! calculate difference and check phase
                 d = Kcb(e)-Kcb(s)
-                if (d<=0.) then
-                    CF = calcKcbCorrFact(mean(RHmin(s:e)), mean(Wind(s:e)), mean(hc(s:e)))
-                    if (d==0.) adjKcb(s) = adjKcb(s)+CF ! adjust the first only for flat phase
-                    adjKcb(e) = adjKcb(e)+CF
+
+                !%PS%: Make sure all segments in a plateau use the same correction (including "x --> * --> x" cases)
+                if (d==0.) then
+                    do while (j < size(r))
+                        if (r(j+1)==0) exit
+                        if (Kcb(int(r(j+1)))/=Kcb(s)) exit
+                        j = j+1
+                    end do
+                    e = r(j)
+                    CF = calcKcbCorrFact(mean(RHmin(s:e)), mean(Wind(s:e)), mean(hcDaily(s:e)))
+                    adjKcb(int(r(i:j))) = Kcb(int(r(i:j)))+CF
+
+                !%PS%: usual behaviour unchanged:
+                else if (d<0.) then
+                    CF = calcKcbCorrFact(mean(RHmin(s:e)), mean(Wind(s:e)), mean(hcDaily(s:e)))
+                    adjKcb(e) = Kcb(e)+CF
                 end if
             end if
+            i = j
         end do
         
     end function
